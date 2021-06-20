@@ -57,10 +57,12 @@ def fit_sin(tt, yy):
     return {"amp": A, "omega": w, "phase": p, "offset": c, "freq": f, "period": 1./f, "fitfunc": fitfunc, "maxcov": numpy.max(pcov), "rawres": (guess, popt, pcov)}
 
 
+print("Enter subject no:")
+subj_no = input()
 eeg_dat = np.fromfile('Data/subj27/blink.dat')
 N = 20000  # Samples
 pi = np.pi
-mat = loadmat('Data/subject_00.mat')
+mat = loadmat(f"Data/subject_{subj_no}.mat")
 mat_data = mat["SIGNAL"]
 signal = mat_data[:, 1:17]
 t = mat_data[:, 0][:N]
@@ -120,4 +122,4 @@ plt.ylabel('Power spectral density (V^2 / Hz)')
 plt.show()
 # Save signal as dat file
 signal_df = pd.DataFrame(sin2eeg)
-signal_df.to_csv('forInner.dat',  index=False)
+signal_df.to_csv(f"signal_{subj_no}.dat",  index=False)
