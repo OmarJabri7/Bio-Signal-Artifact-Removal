@@ -12,6 +12,7 @@ from scipy.signal.ltisys import freqresp
 import pandas as pd
 plt.style.use('ggplot')
 # ******************** Main ********************
+SNR_d = 10  # dB
 
 
 def autocorr(x):
@@ -60,7 +61,8 @@ def fit_sin(tt, yy):
 print("Enter subject no:")
 subj_no = input()
 eeg_dat = np.fromfile('Data/subj27/blink.dat')
-N = 20000  # Samples
+ecg_dat = np.fromfile('Data/ecg_50hz_1.dat.txt')
+N = 12445  # Samples
 pi = np.pi
 mat = loadmat(f"Data/subject_{subj_no}.mat")
 mat_data = mat["SIGNAL"]
@@ -79,7 +81,7 @@ phi_eeg = 2*np.angle(fft_eeg)/N
 eeg_freqs = np.linspace(0, fs/2, floor(N/2) + 1)
 sin2eeg = std_eeg*np.sin(t + phi_eeg) + mean_eeg
 RMS_s = sqrt(np.mean(sin2eeg)**2)
-RMS_n = sqrt(RMS_s**2/pow(10, 20/10))
+RMS_n = sqrt(RMS_s**2/pow(10, SNR_d/10))
 STD_n = RMS_n
 noise_amp = 1
 AWGN = np.random.normal(0, STD_n, sin2eeg.shape[0])
@@ -89,9 +91,10 @@ sin2eeg = dic["amp"]*np.sin(dic["omega"]*t + dic["phase"]) + dic["offset"]
 sin2eeg = sig.detrend(sin2eeg)
 noise_freq = 50  # Hz
 eeg_noise = eeg_dat[:len(sin2eeg)]
-eeg_noise_fft = np.fft.fft(sin2eeg)
-eeg_noise_amp = 2*np.abs(eeg_noise_fft)/N
-yn = eeg_noise_amp*np.sin(2*pi*noise_freq*t)
+ecg_noise = ecg_dat[:len(sin2eeg)]
+ecg_noise_fft = np.fft.fft(ecg_dat)
+ecg_noise_amp = 2*np.abs(ecg_noise_fft)/N
+ecg_noise = ecg_noise_amp*np.sin(2*pi*noise_freq*t)
 f_sin = 8
 sines = 1.2 * np.sin(2 * pi * f_sin * t + 1.2) + 1.4 * np.sin(2 *
                                                               pi * f_sin * t + 0.3)
@@ -99,11 +102,13 @@ gauss_noise = noise_amp*np.random.normal(0, 1, len(sin2eeg))
 noise_lvl = 2
 freqs = autocorr(eeg_dat)
 eeg_noise = band_limited_noise(eeg_noise, noise_lvl, 48, 52, N, fs)
-sin2eeg = sin2eeg + eeg_noise + AWGN
+sin2eeg = sin2eeg + ecg_noise + eeg_noise + AWGN
 sin_peaks = sig.find_peaks(sin2eeg)[0]
 plt.plot(signal_eeg)
 plt.plot(sin2eeg)
-plt.title("Time Domain Fake VS Real EEG")
+plt.xlabel("Sample NO.")
+plt.ylabel("Amplitude (a.u.)")
+plt.title(f"Time Domain Fake VS Real EEG (Subject {subj_no})")
 plt.legend(["Real EEG", "Sine EEG"])
 plt.figure()
 win = 4 * fs
