@@ -1,3 +1,4 @@
+from numpy.lib.twodim_base import eye
 from eeg import EEG
 import scipy.optimize
 import numpy
@@ -50,8 +51,10 @@ def fit_sin(tt, yy):
     guess_offset = numpy.mean(yy)
     guess = numpy.array([guess_amp, 2.*numpy.pi*guess_freq, 0., guess_offset])
 
-    def sinfunc(t, A, w, p, c): return A * numpy.sin(w*t + p) + c
-    popt, pcov = scipy.optimize.curve_fit(sinfunc, tt, yy, p0=guess)
+    def sinfunc(t, A, w, p, c): return A * np.sin(w*t + p) + c
+
+    popt, pcov = scipy.optimize.curve_fit(
+        sinfunc, tt, yy, p0=guess, maxfev=5000)
     A, w, p, c = popt
     f = w/(2.*numpy.pi)
     def fitfunc(t): return A * np.sin(w*t + p) + c
@@ -60,16 +63,17 @@ def fit_sin(tt, yy):
 
 print("Enter subject no:")
 subj_no = input()
-eeg_dat = np.fromfile('Data/subj27/blink.dat')
-ecg_dat = np.fromfile('Data/ecg_50hz_1.dat.txt')
-N = 12445  # Samples
+eeg_dat = np.loadtxt('Data/subj27/blink.dat')
+print(eeg_dat.shape)
+ecg_dat = np.loadtxt('Data/ecg_50hz_1.dat.txt')
 pi = np.pi
 mat = loadmat(f"Data/subject_{subj_no}.mat")
 mat_data = mat["SIGNAL"]
 signal = mat_data[:, 1:17]
+N = min(signal.shape[0], eeg_dat.shape[0])
 t = mat_data[:, 0][:N]
 dt = t[1] - t[0]
-fs = int(1/dt)  # Sampling frequenc
+fs = int(1/dt)  # Sampling frequency
 eeg = signal[:, 0][:N]  # Alpha wave
 # %%
 signal_eeg = np.interp(eeg, (eeg.min(), eeg.max()), (-1, 1))
@@ -90,23 +94,19 @@ dic = fit_sin(t, signal_eeg)
 sin2eeg = dic["amp"]*np.sin(dic["omega"]*t + dic["phase"]) + dic["offset"]
 sin2eeg = sig.detrend(sin2eeg)
 noise_freq = 50  # Hz
-eeg_noise = eeg_dat[:len(sin2eeg)]
-ecg_noise = ecg_dat[:len(sin2eeg)]
-ecg_noise_fft = np.fft.fft(ecg_dat)
-ecg_noise_amp = 2*np.abs(ecg_noise_fft)/N
-ecg_noise = ecg_noise_amp*np.sin(2*pi*noise_freq*t)
+print(sin2eeg.shape)
+eeg_noise = eeg_dat[:N, 2]
 f_sin = 8
 sines = 1.2 * np.sin(2 * pi * f_sin * t + 1.2) + 1.4 * np.sin(2 *
                                                               pi * f_sin * t + 0.3)
 gauss_noise = noise_amp*np.random.normal(0, 1, len(sin2eeg))
-noise_lvl = 2
-freqs = autocorr(eeg_dat)
-eeg_noise = band_limited_noise(eeg_noise, noise_lvl, 48, 52, N, fs)
-sin2eeg = sin2eeg + ecg_noise + eeg_noise + AWGN
+noise_lvl = 1
+# eeg_noise = band_limited_noise(eeg_noise, noise_lvl, 48, 52, N, fs)
+sin2eeg = sin2eeg + eeg_noise  # + AWGN
 sin_peaks = sig.find_peaks(sin2eeg)[0]
-plt.plot(signal_eeg)
-plt.plot(sin2eeg)
-plt.xlabel("Sample NO.")
+plt.plot(t, signal_eeg)
+plt.plot(t, sin2eeg)
+plt.xlabel("Time (s)")
 plt.ylabel("Amplitude (a.u.)")
 plt.title(f"Time Domain Fake VS Real EEG (Subject {subj_no})")
 plt.legend(["Real EEG", "Sine EEG"])
@@ -124,7 +124,122 @@ plt.plot(freqs, psd_1, color='k', lw=2)
 plt.title("Real EEG FR")
 plt.xlabel('Frequency (Hz)')
 plt.ylabel('Power spectral density (V^2 / Hz)')
-plt.show()
+plt.figure()
+# Check Correlation
+corr_sig = sig.correlate(sin2eeg, eeg)
+print(f"Correlation: {np.mean(corr_sig)}")
 # Save signal as dat file
 signal_df = pd.DataFrame(sin2eeg)
 signal_df.to_csv(f"signal_{subj_no}.dat",  index=False)
+# Try other dataset
+eyes_closed = np.loadtxt('Data/EyesClosedNovel_Subject1.tsv')
+eyes_closed_inner = eyes_closed[:, 2]
+eyes_closed_outer = eyes_closed[:, 2]
+# Inner
+N = min(eyes_closed_inner.shape[0], eeg_dat.shape[0])
+fs = 250
+T = 1/fs
+t = np.arange(N)*T
+eyes_closed_inner = eyes_closed_inner[:N]
+dic_fp1 = fit_sin(t, eyes_closed_inner)
+fft_eeg = np.fft.fft(eyes_closed_inner)
+mean_eeg = np.mean(eyes_closed_inner)
+std_eeg = np.std(eyes_closed_inner)
+amp_eeg = np.abs(fft_eeg/N)**2
+phi_eeg = 2*np.angle(fft_eeg)/N
+eeg_freqs = np.linspace(0, fs/2, floor(N/2) + 1)
+sin2fp1 = std_eeg*np.sin(t + phi_eeg) + mean_eeg
+RMS_s = sqrt(np.mean(sin2fp1)**2)
+RMS_n = sqrt(RMS_s**2/pow(10, SNR_d/10))
+STD_n = RMS_n
+noise_amp = 1
+AWGN = np.random.normal(0, STD_n, sin2fp1.shape[0])
+sin2fp1 = dic_fp1["amp"]*np.sin(dic_fp1["omega"]
+                                * t + dic_fp1["phase"]) + dic_fp1["offset"]
+noise_lvl = 0.01
+eeg_noise = eeg_dat[:N, 2]
+# eeg_noise = band_limited_noise(eeg_noise, noise_lvl, 48, 52, N, fs)
+noise_amp = 1
+gauss_noise = noise_amp*np.random.normal(0, 1, len(sin2fp1))
+sin2fp1 = sin2fp1 + eeg_noise  # + gauss_noise
+# Outer
+N = min(eyes_closed_outer.shape[0], eeg_dat.shape[0])
+fs = 250
+T = 1/fs
+t = np.arange(N)*T
+eyes_closed_outer = eyes_closed_outer[:N]
+dic_fp1 = fit_sin(t, eyes_closed_outer)
+fft_eeg = np.fft.fft(eyes_closed_outer)
+mean_eeg = np.mean(eyes_closed_outer)
+std_eeg = np.std(eyes_closed_outer)
+amp_eeg = np.abs(fft_eeg/N)**2
+phi_eeg = 2*np.angle(fft_eeg)/N
+eeg_freqs = np.linspace(0, fs/2, floor(N/2) + 1)
+sin2outer = std_eeg*np.sin(t + phi_eeg) + mean_eeg
+RMS_s = sqrt(np.mean(sin2outer)**2)
+RMS_n = sqrt(RMS_s**2/pow(10, SNR_d/10))
+STD_n = RMS_n
+noise_amp = 1
+AWGN = np.random.normal(0, STD_n, sin2outer.shape[0])
+sin2outer = dic_fp1["amp"]*np.sin(dic_fp1["omega"]
+                                  * t + dic_fp1["phase"]) + dic_fp1["offset"]
+noise_lvl = 0.01
+eeg_noise = eeg_dat[:N, 2]
+# eeg_noise = band_limited_noise(eeg_noise, noise_lvl, 48, 52, N, fs)
+noise_amp = 1
+gauss_noise = noise_amp*np.random.normal(0, 1, len(sin2outer))
+sin2outer = sin2outer + eeg_noise  # + gauss_noise
+signal_df = pd.DataFrame(sin2outer)
+signal_df.to_csv("EyesClosedNovel_Subject1.tsv",  index=False)
+# Inner
+plt.plot(t, eyes_closed_inner)
+plt.xlabel("Time (s)")
+plt.ylabel("Amplitude (a.u.)")
+plt.title(f"Time Domain Real EEG (DNF INNER)")
+plt.figure()
+plt.plot(t, sin2fp1)
+plt.xlabel("Time (s)")
+plt.ylabel("Amplitude (a.u.)")
+plt.title(f"Time Domain Fake EEG (DNF INNER)")
+plt.legend(["Real EEG", "Sine EEG"])
+plt.figure()
+win = 4 * fs
+freqs, psd_1 = sig.welch(sin2fp1, fs, nperseg=fs)
+plt.plot(freqs, psd_1, lw=2)
+plt.title("Fake EEG FR (DNF INNER)")
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Power spectral density (V^2 / Hz)')
+plt.figure()
+win = 4 * fs
+freqs, psd_1 = sig.welch(eyes_closed_inner, fs, nperseg=fs)
+plt.plot(freqs, psd_1, lw=2)
+plt.title("Real EEG FR (DNF INNER)")
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Power spectral density (V^2 / Hz)')
+plt.figure()
+# Outer
+plt.plot(t, eyes_closed_outer)
+plt.xlabel("Time (s)")
+plt.ylabel("Amplitude (a.u.)")
+plt.title(f"Time Domain Real EEG (DNF OUTER)")
+plt.figure()
+plt.plot(t, sin2outer)
+plt.xlabel("Time (s)")
+plt.ylabel("Amplitude (a.u.)")
+plt.title(f"Time Domain Fake EEG (DNF OUTER)")
+plt.legend(["Real EEG", "Sine EEG"])
+plt.figure()
+win = 4 * fs
+freqs, psd_1 = sig.welch(sin2outer, fs, nperseg=fs)
+plt.plot(freqs, psd_1, lw=2)
+plt.title("Fake EEG FR (DNF OUTER)")
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Power spectral density (V^2 / Hz)')
+plt.figure()
+win = 4 * fs
+freqs, psd_1 = sig.welch(eyes_closed_outer, fs, nperseg=fs)
+plt.plot(freqs, psd_1, lw=2)
+plt.title("Real EEG FR (DNF OUTER)")
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Power spectral density (V^2 / Hz)')
+plt.show()
