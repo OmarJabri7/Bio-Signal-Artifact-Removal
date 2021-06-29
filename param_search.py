@@ -63,8 +63,11 @@ def fit_sin(tt, yy):
 
 print("Enter subject no:")
 subj_no = input()
+noise_idx = 1
 eeg_dat = np.loadtxt('Data/subj27/blink.dat')
-print(eeg_dat.shape)
+sudoku_dat = np.loadtxt('Data/subj27/sudoku.dat')
+read_dat = np.loadtxt('Data/subj27/lie_read.dat')
+word_dat = np.loadtxt('Data/subj27/word_search.dat')
 ecg_dat = np.loadtxt('Data/ecg_50hz_1.dat.txt')
 pi = np.pi
 mat = loadmat(f"Data/subject_{subj_no}.mat")
@@ -94,15 +97,29 @@ dic = fit_sin(t, signal_eeg)
 sin2eeg = dic["amp"]*np.sin(dic["omega"]*t + dic["phase"]) + dic["offset"]
 sin2eeg = sig.detrend(sin2eeg)
 noise_freq = 50  # Hz
-print(sin2eeg.shape)
-eeg_noise = eeg_dat[:N, 2]
+eeg_noise = eeg_dat[:N, 1]
+eeg_noise_2 = eeg_dat[:N, 2]
+sudoku_noise = sudoku_dat[:N, 1]
+sudoku_noise_2 = sudoku_dat[:N, 2]
+read_noise = read_dat[:N, 1]
+read_noise_2 = read_dat[:N, 2]
+word_noise = word_dat[:N, 1]
+word_noise_2 = word_dat[:N, 2]
+ecg_noise = ecg_dat[:N, 0]
+ecg_noise_2 = ecg_dat[:N, 1]
+print(eeg_noise.shape, eeg_noise_2.shape,
+      sudoku_noise_2.shape, sudoku_noise.shape, read_noise.shape, read_noise_2.shape,
+      word_noise.shape, word_noise_2.shape, ecg_noise.shape, ecg_noise_2.shape)
 f_sin = 8
 sines = 1.2 * np.sin(2 * pi * f_sin * t + 1.2) + 1.4 * np.sin(2 *
                                                               pi * f_sin * t + 0.3)
-gauss_noise = noise_amp*np.random.normal(0, 1, len(sin2eeg))
 noise_lvl = 1
 # eeg_noise = band_limited_noise(eeg_noise, noise_lvl, 48, 52, N, fs)
-sin2eeg = sin2eeg + eeg_noise  # + AWGN
+sin2eeg = sin2eeg + eeg_noise + eeg_noise_2 + \
+    sudoku_noise + sudoku_noise_2 + read_noise + read_noise_2 + \
+    word_noise + word_noise_2  # + ecg_noise + ecg_noise_2  # + AWGN
+zeros = np.zeros(len(sin2eeg))
+sig_eeg = np.column_stack((sin2eeg, sin2eeg, zeros))
 sin_peaks = sig.find_peaks(sin2eeg)[0]
 plt.plot(t, signal_eeg)
 plt.plot(t, sin2eeg)
@@ -129,8 +146,9 @@ plt.figure()
 corr_sig = sig.correlate(sin2eeg, eeg)
 print(f"Correlation: {np.mean(corr_sig)}")
 # Save signal as dat file
-signal_df = pd.DataFrame(sin2eeg)
-signal_df.to_csv(f"signal_{subj_no}.dat",  index=False)
+signal_df = pd.DataFrame(sig_eeg)
+signal_df.to_csv("Results-Generation/EyesClosedNovel_Subject1.csv",
+                 index=True, header=False, sep="\t")
 # Try other dataset
 eyes_closed = np.loadtxt('Data/EyesClosedNovel_Subject1.tsv')
 eyes_closed_inner = eyes_closed[:, 2]
@@ -139,65 +157,52 @@ eyes_closed_outer = eyes_closed[:, 2]
 N = min(eyes_closed_inner.shape[0], eeg_dat.shape[0])
 fs = 250
 T = 1/fs
-t = np.arange(N)*T
+t_in = np.arange(N)*T
 eyes_closed_inner = eyes_closed_inner[:N]
-dic_fp1 = fit_sin(t, eyes_closed_inner)
+dic_fp1 = fit_sin(t_in, eyes_closed_inner)
 fft_eeg = np.fft.fft(eyes_closed_inner)
 mean_eeg = np.mean(eyes_closed_inner)
 std_eeg = np.std(eyes_closed_inner)
 amp_eeg = np.abs(fft_eeg/N)**2
 phi_eeg = 2*np.angle(fft_eeg)/N
 eeg_freqs = np.linspace(0, fs/2, floor(N/2) + 1)
-sin2fp1 = std_eeg*np.sin(t + phi_eeg) + mean_eeg
+sin2fp1 = std_eeg*np.sin(t_in + phi_eeg) + mean_eeg
 RMS_s = sqrt(np.mean(sin2fp1)**2)
 RMS_n = sqrt(RMS_s**2/pow(10, SNR_d/10))
 STD_n = RMS_n
 noise_amp = 1
 AWGN = np.random.normal(0, STD_n, sin2fp1.shape[0])
 sin2fp1 = dic_fp1["amp"]*np.sin(dic_fp1["omega"]
-                                * t + dic_fp1["phase"]) + dic_fp1["offset"]
+                                * t_in + dic_fp1["phase"]) + dic_fp1["offset"]
 noise_lvl = 0.01
-eeg_noise = eeg_dat[:N, 2]
+eeg_noise = eeg_dat[:N, noise_idx]
 # eeg_noise = band_limited_noise(eeg_noise, noise_lvl, 48, 52, N, fs)
 noise_amp = 1
 gauss_noise = noise_amp*np.random.normal(0, 1, len(sin2fp1))
-sin2fp1 = sin2fp1 + eeg_noise  # + gauss_noise
-# Outer
-N = min(eyes_closed_outer.shape[0], eeg_dat.shape[0])
-fs = 250
-T = 1/fs
-t = np.arange(N)*T
-eyes_closed_outer = eyes_closed_outer[:N]
-dic_fp1 = fit_sin(t, eyes_closed_outer)
-fft_eeg = np.fft.fft(eyes_closed_outer)
-mean_eeg = np.mean(eyes_closed_outer)
-std_eeg = np.std(eyes_closed_outer)
-amp_eeg = np.abs(fft_eeg/N)**2
-phi_eeg = 2*np.angle(fft_eeg)/N
-eeg_freqs = np.linspace(0, fs/2, floor(N/2) + 1)
-sin2outer = std_eeg*np.sin(t + phi_eeg) + mean_eeg
-RMS_s = sqrt(np.mean(sin2outer)**2)
-RMS_n = sqrt(RMS_s**2/pow(10, SNR_d/10))
-STD_n = RMS_n
-noise_amp = 1
-AWGN = np.random.normal(0, STD_n, sin2outer.shape[0])
-sin2outer = dic_fp1["amp"]*np.sin(dic_fp1["omega"]
-                                  * t + dic_fp1["phase"]) + dic_fp1["offset"]
-noise_lvl = 0.01
-eeg_noise = eeg_dat[:N, 2]
-# eeg_noise = band_limited_noise(eeg_noise, noise_lvl, 48, 52, N, fs)
-noise_amp = 1
-gauss_noise = noise_amp*np.random.normal(0, 1, len(sin2outer))
-sin2outer = sin2outer + eeg_noise  # + gauss_noise
-signal_df = pd.DataFrame(sin2outer)
-signal_df.to_csv("EyesClosedNovel_Subject1.tsv",  index=False)
-# Inner
-plt.plot(t, eyes_closed_inner)
+eeg_noise = eeg_dat[:N, 1]
+eeg_noise_2 = eeg_dat[:N, 2]
+sudoku_noise = sudoku_dat[:N, 1]
+sudoku_noise_2 = sudoku_dat[:N, 2]
+read_noise = read_dat[:N, 1]
+read_noise_2 = read_dat[:N, 2]
+word_noise = word_dat[:N, 1]
+word_noise_2 = word_dat[:N, 2]
+ecg_noise = ecg_dat[:N, 0]
+ecg_noise_2 = ecg_dat[:N, 1]
+sin2fp1 = sin2fp1 + eeg_noise + eeg_noise_2 + sudoku_noise + \
+    sudoku_noise_2 + read_noise + read_noise_2 + word_noise + \
+    word_noise_2  # + ecg_noise + ecg_noise_2  # + gauss_noise
+zeros = np.zeros(len(sin2fp1))
+sig_eeg = np.column_stack((sin2fp1, sin2fp1, zeros))
+signal_df = pd.DataFrame(sig_eeg)
+signal_df.to_csv("Results-Generation/EyesClosedNovel_Subject2.csv",
+                 index=True, header=False, sep="\t")
+plt.plot(t_in, eyes_closed_inner)
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude (a.u.)")
 plt.title(f"Time Domain Real EEG (DNF INNER)")
 plt.figure()
-plt.plot(t, sin2fp1)
+plt.plot(t_in, sin2fp1)
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude (a.u.)")
 plt.title(f"Time Domain Fake EEG (DNF INNER)")
@@ -218,12 +223,55 @@ plt.xlabel('Frequency (Hz)')
 plt.ylabel('Power spectral density (V^2 / Hz)')
 plt.figure()
 # Outer
-plt.plot(t, eyes_closed_outer)
+N = min(eyes_closed_outer.shape[0], eeg_dat.shape[0])
+fs = 250
+T = 1/fs
+t_out = np.arange(N)*T
+eyes_closed_outer = eyes_closed_outer[:N]
+dic_fp1 = fit_sin(t_out, eyes_closed_outer)
+fft_eeg = np.fft.fft(eyes_closed_outer)
+mean_eeg = np.mean(eyes_closed_outer)
+std_eeg = np.std(eyes_closed_outer)
+amp_eeg = np.abs(fft_eeg/N)**2
+phi_eeg = 2*np.angle(fft_eeg)/N
+eeg_freqs = np.linspace(0, fs/2, floor(N/2) + 1)
+sin2outer = std_eeg*np.sin(t_out + phi_eeg) + mean_eeg
+RMS_s = sqrt(np.mean(sin2outer)**2)
+RMS_n = sqrt(RMS_s**2/pow(10, SNR_d/10))
+STD_n = RMS_n
+noise_amp = 1
+AWGN = np.random.normal(0, STD_n, sin2outer.shape[0])
+sin2outer = dic_fp1["amp"]*np.sin(dic_fp1["omega"]
+                                  * t_out + dic_fp1["phase"]) + dic_fp1["offset"]
+noise_lvl = 0.01
+eeg_noise = eeg_dat[:N, 1]
+eeg_noise_2 = eeg_dat[:N, 2]
+sudoku_noise = sudoku_dat[:N, 1]
+sudoku_noise_2 = sudoku_dat[:N, 2]
+read_noise = read_dat[:N, 1]
+read_noise_2 = read_dat[:N, 2]
+word_noise = word_dat[:N, 1]
+word_noise_2 = word_dat[:N, 2]
+ecg_noise = ecg_dat[:N, 0]
+ecg_noise_2 = ecg_dat[:N, 1]
+# eeg_noise = band_limited_noise(eeg_noise, noise_lvl, 48, 52, N, fs)
+noise_amp = 1
+gauss_noise = noise_amp*np.random.normal(0, 1, len(sin2outer))
+sin2outer = sin2outer + eeg_noise + eeg_noise_2 + sudoku_noise + \
+    sudoku_noise_2 + read_noise + read_noise_2 + word_noise + \
+    word_noise_2  # + ecg_noise + ecg_noise_2  # + gauss_noise
+zeros = np.zeros(len(sin2outer))
+sig_eeg = np.column_stack((sin2outer, sin2outer, zeros))
+signal_df = pd.DataFrame(sig_eeg)
+signal_df.to_csv("Results-Generation/EyesClosedNovel_Subject3.csv",
+                 index=True, header=False, sep="\t")
+# Outer
+plt.plot(t_out, eyes_closed_outer)
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude (a.u.)")
 plt.title(f"Time Domain Real EEG (DNF OUTER)")
 plt.figure()
-plt.plot(t, sin2outer)
+plt.plot(t_out, sin2outer)
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude (a.u.)")
 plt.title(f"Time Domain Fake EEG (DNF OUTER)")

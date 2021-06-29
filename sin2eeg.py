@@ -70,15 +70,20 @@ def to_polar(complex_ar):
 eeg_dat = np.loadtxt('Data/subj27/word_search.dat')
 blink_dat = np.loadtxt('Data/subj27/blink.dat')
 N = eeg_dat.shape[0]  # Samples
-Fs = 256
+ts = eeg_dat[:, 0]
+print(1/(ts[1] - ts[0]))
+Fs = 1000.0
 f = 10
-x = np.arange(N)
+sample = N
+x = np.arange(sample)
 period = 0.001
-A = 0.5
-y = A*np.sin(period * np.pi * f * x / Fs)
+A = 0.1
+y = A*np.sin(2 * np.pi * f * x / Fs)
+print(y.shape)
 # %%
 # Add AWGN based on desired SNR
 N = min(eeg_dat.shape[0], blink_dat.shape[0])
+print(blink_dat.shape[0])
 y = y[:N]
 eeg_noise = eeg_dat[:N, 1]
 eeg_noise_2 = eeg_dat[:N, 2]
