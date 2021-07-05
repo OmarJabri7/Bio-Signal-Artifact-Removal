@@ -16,6 +16,14 @@ plt.style.use('ggplot')
 SNR_d = 10  # dB
 
 
+def butter_bandpass(data, Wn, fs, order=5):
+    nyq = 0.5 * fs
+    Wn = Wn/nyq
+    sos = sig.butter(order, Wn, analog=False, btype='band', output='sos')
+    y = sig.sosfilt(sos, data)
+    return y
+
+
 def autocorr(x):
     result = numpy.correlate(x, x, mode='full')
     return result
@@ -29,6 +37,13 @@ def fftnoise(f):
     f[1:Np+1] *= phases
     f[-1:-1-Np:-1] = np.conj(f[1:Np+1])
     return np.fft.ifft(f).real
+
+
+def signaltonoise(a, axis=0, ddof=0):
+    a = np.asanyarray(a)
+    m = a.mean(axis)
+    sd = a.std(axis=axis, ddof=ddof)
+    return np.where(sd == 0, 0, m/sd)
 
 
 def band_limited_noise(noise, noise_lvl, min_freq, max_freq, samples=1024, samplerate=1):
@@ -107,17 +122,19 @@ word_noise = word_dat[:N, 1]
 word_noise_2 = word_dat[:N, 2]
 ecg_noise = ecg_dat[:N, 0]
 ecg_noise_2 = ecg_dat[:N, 1]
-print(eeg_noise.shape, eeg_noise_2.shape,
-      sudoku_noise_2.shape, sudoku_noise.shape, read_noise.shape, read_noise_2.shape,
-      word_noise.shape, word_noise_2.shape, ecg_noise.shape, ecg_noise_2.shape)
 f_sin = 8
 sines = 1.2 * np.sin(2 * pi * f_sin * t + 1.2) + 1.4 * np.sin(2 *
                                                               pi * f_sin * t + 0.3)
 noise_lvl = 1
 # eeg_noise = band_limited_noise(eeg_noise, noise_lvl, 48, 52, N, fs)
-sin2eeg = sin2eeg + eeg_noise + eeg_noise_2 + \
-    sudoku_noise + sudoku_noise_2 + read_noise + read_noise_2 + \
-    word_noise + word_noise_2  # + ecg_noise + ecg_noise_2  # + AWGN
+Wn = np.array([8, 13])
+fs_rad = fs*6.28
+# sin2eeg = butter_bandpass(sin2eeg, Wn, fs_rad)
+sin2eeg = sin2eeg + eeg_noise  # + eeg_noise_2 + \
+# sudoku_noise + sudoku_noise_2 + read_noise + read_noise_2 + \
+# word_noise + word_noise_2  # + ecg_noise + ecg_noise_2  # + AWGN
+snr = signaltonoise(sin2eeg)
+print(f"SNR: {snr}")
 zeros = np.zeros(len(sin2eeg))
 sig_eeg = np.column_stack((sin2eeg, sin2eeg, zeros))
 sin_peaks = sig.find_peaks(sin2eeg)[0]

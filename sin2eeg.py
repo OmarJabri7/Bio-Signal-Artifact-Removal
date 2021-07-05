@@ -9,6 +9,7 @@ from math import floor, sqrt, pow
 from scipy.spatial.distance import euclidean
 from fastdtw import fastdtw
 import matplotlib.animation as anim
+from scipy import stats
 
 pi = np.pi
 
@@ -54,53 +55,56 @@ def butter_bandpass(signal, lowcut, highcut, fs, order=5):
 def end(x): return len(x) - 1
 
 
-def brute_search(signal, target, params, tolerance, orders, diff=1e3):
-    while(diff >= tolerance):
-
-        pass
-
-
 def to_polar(complex_ar):
     return np.abs(complex_ar), np.angle(complex_ar)
+
+
+def signaltonoise(a, axis=0, ddof=0):
+    a = np.asanyarray(a)
+    m = a.mean(axis)
+    sd = a.std(axis=axis, ddof=ddof)
+    return 20*np.log10(abs(np.where(sd == 0, 0, m/sd)))
 
 # ******************** Main ********************
 
 
 # %%
+sbj = 1
 eeg_dat = np.loadtxt('Data/subj27/word_search.dat')
 blink_dat = np.loadtxt('Data/subj27/blink.dat')
+relax_dat = np.loadtxt('Data/subj27/sit_relax.dat')
 N = eeg_dat.shape[0]  # Samples
 ts = eeg_dat[:, 0]
-print(1/(ts[1] - ts[0]))
+noise_fs = 1/(ts[1] - ts[0])
+print(noise_fs)
 Fs = 1000.0
 f = 10
 sample = N
 x = np.arange(sample)
-period = 0.001
-A = 0.1
+A = 0.01
 y = A*np.sin(2 * np.pi * f * x / Fs)
-print(y.shape)
 # %%
 # Add AWGN based on desired SNR
 N = min(eeg_dat.shape[0], blink_dat.shape[0])
-print(blink_dat.shape[0])
 y = y[:N]
 eeg_noise = eeg_dat[:N, 1]
 eeg_noise_2 = eeg_dat[:N, 2]
 blink_noise = blink_dat[:N, 1]
 blink_noise_2 = blink_dat[:N, 2]
-print(N, y.shape, eeg_noise.shape, eeg_noise_2.shape,
-      blink_noise.shape, blink_noise_2.shape)
-fake_eeg = y + eeg_noise + eeg_noise_2 + \
-    blink_noise + blink_noise_2  # + sines + AWGN
-eyes_closed = np.loadtxt('Data/EyesClosedNovel_Subject1.tsv')
+relax_noise = relax_dat[:N, 1]
+fake_eeg = y + relax_noise  # + blink_noise  # + eeg_noise_2 + \
+# eeg_noise + blink_noise_2  # + sines + AWGN
+fake_eeg *= A
+blink_noise *= A
+snr = signaltonoise(fake_eeg)
+print(f"SNR: {snr}")
+eyes_closed = np.loadtxt('Data/Novel_Subject.tsv')
 eyes_closed_inner = eyes_closed[:, 2]
 eyes_closed_outer = eyes_closed[:, 2]
 zeros = np.zeros(len(fake_eeg))
-sig_fake = np.column_stack((fake_eeg, fake_eeg, zeros))
-print(sig_fake)
+sig_fake = np.column_stack((blink_noise, fake_eeg, zeros))
 signal_df = pd.DataFrame(sig_fake)
-signal_df.to_csv("EyesClosedNovel_Subject1.tsv",
+signal_df.to_csv(f"deepNeuronalFilter/SubjectData/EEG_Subject{sbj}.tsv",
                  index=True, header=False,  sep="\t")
 plt.plot(fake_eeg)
 plt.title("Fake EEG")
@@ -126,4 +130,11 @@ plt.plot(freqs, psd_1, color='k', lw=2)
 plt.title("Real EEG FR")
 plt.xlabel('Frequency (Hz)')
 plt.ylabel('Power spectral density (V^2 / Hz)')
+plt.figure()
+dnf_res = pd.read_csv('Results-Generation/remover_subject1.tsv', sep=" ")
+res = dnf_res.values
+res = res[600:, :]
+print("SNR NEW: " + str(signaltonoise(res)))
+plt.plot(res[:, 0])
+plt.ylim(-0.01, 0.01)
 plt.show()
