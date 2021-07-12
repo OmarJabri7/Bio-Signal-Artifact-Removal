@@ -43,6 +43,11 @@ def live_plotter(x_vec, y1_data, line1, identifier='', pause_time=2):
     return line1
 
 
+def calc_SNR(noise_var, sig_var):
+    SNR = 20 * np.log10(sig_var / noise_var)
+    return SNR
+
+
 def butter_bandpass(signal, lowcut, highcut, fs, order=5):
     nyq = 0.5 * fs
     low = lowcut / nyq
@@ -65,10 +70,56 @@ def signaltonoise(a, axis=0, ddof=0):
     sd = a.std(axis=axis, ddof=ddof)
     return 20*np.log10(abs(np.where(sd == 0, 0, m/sd)))
 
-# ******************** Main ********************
+
+def plot_freq_resp(signal, Fs, title):
+    fourierTransform = np.fft.fft(signal)/len(signal)
+    fourierTransform = fourierTransform[range(int(len(signal)/2))]
+    tpCount = len(signal)
+    values = np.arange(int(tpCount/2))
+    timePeriod = tpCount/Fs
+    frequencies = values/timePeriod
+    plt.plot(frequencies, abs(fourierTransform))
+    plt.title(title)
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel('Power spectral density (V^2 / Hz)')
+    plt.figure()
 
 
-# %%
+def plot_welch(signal, Fs, title, plot):
+    win = 4 * Fs
+    freqs, psd = sig.welch(signal, Fs, nperseg=win)
+    if(plot == True):
+        plt.plot(freqs, psd, color='k', lw=2)
+        plt.title(title)
+        plt.xlabel('Frequency (Hz)')
+        plt.ylabel('Power spectral density (V^2 / Hz)')
+        plt.figure()
+    return psd
+
+
+def plot_time_series(signal, title):
+    plt.plot(signal)
+    plt.title(title)
+    plt.ylabel("Signal Voltage (V)")
+    plt.xlabel("Time (s)")
+    plt.figure()
+
+
+# def read_EEG_pure(filename):
+#     a = np.loadtxt(filename)
+#     f = a[:, 0]
+#     p = a[:, 1]
+#     psd = np.interp1d(f, p, kind='cubic')
+#     bandpower = 0
+#     for f2 in np.arange(f_signal_min, f_signal_max):
+#         bandpower = bandpower + (10**psd(f2)) * \
+#             (eegFilterFrequencyResponse[f2]**2)
+#     return bandpower
+    # ******************** Main ********************
+
+    # %%
+print("Show Plots: (y|n)")
+show_plots = input().lower()
 sbj = 1
 eeg_dat = np.loadtxt('Data/subj27/word_search.dat')
 blink_dat = np.loadtxt('Data/subj27/blink.dat')
@@ -76,12 +127,11 @@ relax_dat = np.loadtxt('Data/subj27/sit_relax.dat')
 N = eeg_dat.shape[0]  # Samples
 ts = eeg_dat[:, 0]
 noise_fs = 1/(ts[1] - ts[0])
-print(noise_fs)
 Fs = 1000.0
 f = 10
 sample = N
 x = np.arange(sample)
-A = 0.01
+A = 0.1
 y = A*np.sin(2 * np.pi * f * x / Fs)
 # %%
 # Add AWGN based on desired SNR
@@ -92,49 +142,48 @@ eeg_noise_2 = eeg_dat[:N, 2]
 blink_noise = blink_dat[:N, 1]
 blink_noise_2 = blink_dat[:N, 2]
 relax_noise = relax_dat[:N, 1]
-fake_eeg = y + relax_noise  # + blink_noise  # + eeg_noise_2 + \
-# eeg_noise + blink_noise_2  # + sines + AWGN
-fake_eeg *= A
-blink_noise *= A
-snr = signaltonoise(fake_eeg)
-print(f"SNR: {snr}")
+relax_noise = relax_dat[:N, 2]
+noise = relax_noise
+fake_eeg = y + noise
+# eeg_pow = plot_welch(fake_eeg, Fs, "", False)
+eeg_pow = np.sum(fake_eeg**2)
+# noise_pow = plot_welch(noise, Fs, "", False)
+noise_pow = ssq = np.sum(noise**2)
+noise_var = np.var(noise)
+sig_var = np.var(fake_eeg)
+gain = 0.1
+fake_eeg *= gain
+noise *= gain
+# SNR = signaltonoise(fake_eeg)
+# SNR = calc_SNR(noise_var, sig_var)
+SNR = 20*np.log10(np.mean(eeg_pow/noise_pow))
+print(f"SNR: {SNR} dB")
 eyes_closed = np.loadtxt('Data/Novel_Subject.tsv')
 eyes_closed_inner = eyes_closed[:, 2]
 eyes_closed_outer = eyes_closed[:, 2]
 zeros = np.zeros(len(fake_eeg))
-sig_fake = np.column_stack((blink_noise, fake_eeg, zeros))
+sig_fake = np.column_stack((fake_eeg, noise, zeros))
 signal_df = pd.DataFrame(sig_fake)
 signal_df.to_csv(f"deepNeuronalFilter/SubjectData/EEG_Subject{sbj}.tsv",
                  index=True, header=False,  sep="\t")
-plt.plot(fake_eeg)
-plt.title("Fake EEG")
-plt.ylabel("Signal Voltage (V)")
-plt.xlabel("Time (s)")
-# plt.ylim(-10, 1)
-plt.figure()
-plt.plot(eyes_closed_inner)
-plt.xlabel("Time (s)")
-plt.ylabel("Amplitude (a.u.)")
-plt.title(f"Time Domain Real EEG (DNF INNER)")
-plt.figure()
-win = 4 * Fs
-freqs, psd_1 = sig.welch(fake_eeg, Fs, nperseg=win)
-plt.plot(freqs, psd_1, color='k', lw=2)
-plt.title("Fake EEG FR")
-plt.xlabel('Frequency (Hz)')
-plt.ylabel('Power spectral density (V^2 / Hz)')
-plt.figure()
-win = 4 * Fs
-freqs, psd_1 = sig.welch(eyes_closed_inner, Fs, nperseg=win)
-plt.plot(freqs, psd_1, color='k', lw=2)
-plt.title("Real EEG FR")
-plt.xlabel('Frequency (Hz)')
-plt.ylabel('Power spectral density (V^2 / Hz)')
-plt.figure()
-dnf_res = pd.read_csv('Results-Generation/remover_subject1.tsv', sep=" ")
+dnf_res = pd.read_csv(
+    f"deepNeuronalFilter/cppData/subject{sbj}/fnn_subject{sbj}.tsv", sep=" ")
 res = dnf_res.values
-res = res[600:, :]
-print("SNR NEW: " + str(signaltonoise(res)))
-plt.plot(res[:, 0])
-plt.ylim(-0.01, 0.01)
-plt.show()
+init = 5000
+res = res[init:fake_eeg.shape[0] + init, 0]
+res_var = np.var(res)
+# res_pow = plot_welch(res, Fs, "", False)
+res_pow = np.sum(res**2)
+# SNR_NEW = signaltonoise(res)
+# SNR_NEW = calc_SNR(noise_var, res_var)
+SNR_NEW = 20*np.log10(np.mean(res_pow/noise_pow))
+print(f"SNR NEW: {SNR_NEW} dB")
+plot_time_series(fake_eeg, "Fake EEG")
+plot_time_series(noise, "Noise")
+plot_time_series(res, "DNF Result")
+plot_time_series(eyes_closed_inner, "Real EEG")
+plot_freq_resp(fake_eeg, Fs, "Fake EEG")
+plot_freq_resp(res, Fs, "DNF result")
+plot_freq_resp(eyes_closed_inner, Fs, "Real EEG")
+if(show_plots == "y"):
+    plt.show()
