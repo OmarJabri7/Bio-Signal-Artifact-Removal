@@ -43,7 +43,7 @@ dynaPlots::dynaPlots(cv::Mat &_frame, int _plotW, int _plotH)
 dynaPlots::~dynaPlots() = default;
 
 void dynaPlots::plotMainSignals(std::vector<double> outer_raw, std::vector<double> outer, std::vector<double> outer_end,
-                                std::vector<double> inner_raw, std::vector<double> inner,
+                                std::vector<double> inner_raw, std::vector<double> inner, std::vector<double> snr,
                                 std::vector<double> remover, std::vector<double> fnn,
                                 std::vector<double> l1_plot, const std::vector<double> &l2_plot, const std::vector<double> &l3_plot,
                                 std::vector<double> lms_output,
@@ -58,6 +58,11 @@ void dynaPlots::plotMainSignals(std::vector<double> outer_raw, std::vector<doubl
     double inner_min = *min_element(inner.begin(), inner.end());
     double inner_max = *max_element(inner.begin(), inner.end());
     double inner_v = *inner.end();
+    double snr_sum = std::accumulate(snr.begin(), snr.end(), 0);
+    double snr_mean = snr_sum / snr.size();
+    double snr_min = *min_element(snr.begin(), snr.end());
+    double snr_max = *max_element(snr.begin(), snr.end());
+    double snr_v = *snr.end();
     double remover_min = *min_element(remover.begin(), remover.end());
     double remover_max = *max_element(remover.begin(), remover.end());
     double remover_v = *remover.end();
@@ -69,26 +74,30 @@ void dynaPlots::plotMainSignals(std::vector<double> outer_raw, std::vector<doubl
 
     int step = 0;
     cvui::sparkline(frame, outer_raw, graphX, graphY * step + topOffset, graphDX, graphDY, 0x000000); //black
-    cvui::sparkline(frame, outer, graphX, graphY * step + topOffset, graphDX, graphDY, 0x000000);     //white
-    cvui::sparkline(frame, outer_end, graphX, graphY * step + topOffset, graphDX, graphDY, 0x000000); //gray
-    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "Outer: raw(b) & filtered(w) & end(gray)", 0.4, 0x000000);
+    cvui::sparkline(frame, outer, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff);     //white
+    cvui::sparkline(frame, outer_end, graphX, graphY * step + topOffset, graphDX, graphDY, 0x7d7d7d); //gray
+    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "Outer: raw(b) & filtered(w) & end(gray)");
     cvui::printf(frame, graphX, graphY * step + topOffset + graphDY + lineEnter, "min: %+.5lf max: %+.5lf value: %+.5lf", outer_min, outer_max, outer_v);
     step++;
     cvui::sparkline(frame, inner_raw, graphX, graphY * step + topOffset, graphDX, graphDY, 0x000000); //black
-    cvui::sparkline(frame, inner, graphX, graphY * step + topOffset, graphDX, graphDY, 0x000000);     //white
-    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "inner: raw(b) & filtered(w)", 0.4, 0x000000);
+    cvui::sparkline(frame, inner, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff);     //white
+    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "inner: raw(b) & filtered(w)");
     cvui::printf(frame, graphX, graphY * step + topOffset + graphDY + lineEnter, "min: %+.5lf max: %+.5lf value: %+.5lf", inner_min, inner_max, inner_v);
     step++;
-    cvui::sparkline(frame, remover, graphX, graphY * step + topOffset, graphDX, graphDY, 0x000000); //white
+    cvui::sparkline(frame, snr, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff); //white
+    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "SNR");
+    cvui::printf(frame, graphX, graphY * step + topOffset + graphDY + lineEnter, "min: %+.5lf max: %+.5lf value: %+.5lf", snr_min, snr_max, snr_mean);
+    step++;
+    cvui::sparkline(frame, remover, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff); //white
     cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "remover");
     cvui::printf(frame, graphX, graphY * step + topOffset + graphDY + lineEnter, "min: %+.5lf max: %+.5lf value: %+.5lf", remover_min, remover_max, remover_v);
     step++;
-    cvui::sparkline(frame, fnn, graphX, graphY * step + topOffset, graphDX, graphDY, 0x000000); //white
-    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "feedback / neural network", 0.4, 0x000000);
+    cvui::sparkline(frame, fnn, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff); //white
+    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "feedback / neural network");
     cvui::printf(frame, graphX, graphY * step + topOffset + graphDY + lineEnter, "min: %+.5lf max: %+.5lf value: %+.5lf", fnn_min, fnn_max, fnn_v);
     step++;
-    cvui::sparkline(frame, lms_output, graphX, graphY * step + topOffset, graphDX, graphDY, 0x000000); //white
-    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "LMS output", 0.4, 0x000000);
+    cvui::sparkline(frame, lms_output, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff); //white
+    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "LMS output");
     //    cvui::sparkline(frame, l1_plot,   graphX, graphY * step + topOffset, graphDX, 2 * graphDY + 1 * gapY, 0xffffff); //white
     //    cvui::sparkline(frame, l2_plot,   graphX, graphY * step + topOffset, graphDX, 2 * graphDY + 1 * gapY, 0x7d7d7d); //grey
     //    cvui::sparkline(frame, l3_plot,   graphX, graphY * step + topOffset, graphDX, 2 * graphDY + 1 * gapY, 0x000000); //black
@@ -102,10 +111,10 @@ void dynaPlots::plotVariables(int closed_or_open)
     int barX = graphDX + graphX + gapX;
 
     int step = 0;
-    cvui::text(frame, barX + 60, barY * (bar_p + step) + topOffset, "inner gain");
+    cvui::text(frame, barX + 60, barY * (bar_p + step) + topOffset, "outer gain");
     cvui::trackbar(frame, barX, barY * (bar_p + step) + topOffset, barDX, &outer_gain[closed_or_open], (double)gainStart, (double)gainEnd);
     step++;
-    cvui::text(frame, barX + 60, barY * (bar_p + step) + topOffset, "outer gain");
+    cvui::text(frame, barX + 60, barY * (bar_p + step) + topOffset, "inner gain");
     cvui::trackbar(frame, barX, barY * (bar_p + step) + topOffset, barDX, &inner_gain[closed_or_open], (double)gainStart, (double)gainEnd);
     step++;
     cvui::text(frame, barX + 60, barY * (bar_p + step) + topOffset, "remover gain");
@@ -129,8 +138,8 @@ void dynaPlots::plotVariables(int closed_or_open)
 
 void dynaPlots::plotTitle(int count, int duration)
 {
-    cvui::printf(frame, gapX, titleY, 0.4, 0x000000, "Sample number: %d , Duration: %d [min] %d [s]",
+    cvui::printf(frame, gapX, titleY, "Sample number: %d , Duration: %d [min] %d [s]",
                  count, int(duration / 60), duration % 60);
 
-    cvui::text(frame, gapX, titleY + lineEnter, "DNF on Fake EEG:", 0.4, 0x000000);
+    cvui::text(frame, gapX, titleY + lineEnter, "DNF:");
 }

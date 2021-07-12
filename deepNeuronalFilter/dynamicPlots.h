@@ -28,7 +28,7 @@ public:
     ~dynaPlots();
 
     void plotMainSignals(std::vector<double> outer_raw, std::vector<double> outer, std::vector<double> outer_end,
-                         std::vector<double> inner_raw, std::vector<double> inner,
+                         std::vector<double> inner_raw, std::vector<double> inner, std::vector<double> snr,
                          std::vector<double> remover, std::vector<double> fnn,
                          std::vector<double> l1_plot, const std::vector<double> &l2_plot, const std::vector<double> &l3_plot,
                          std::vector<double> lms_output,
@@ -47,14 +47,14 @@ public:
 private:
     cv::Mat frame;
 
-    // variables
-    double outer_gain[2] = {100};
-    double inner_gain[2] = {100};
-    double remover_gain[2] = {10};
-    double feedback_gain[2] = {1};
+    // variable          {closed, open}
+    double outer_gain[2] = {0.5};
+    double inner_gain[2] = {5};
+    double remover_gain[2] = {1.8};
+    double feedback_gain[2] = {0.1};
     double wEta[2] = {1};
     double wEtaPower[2] = {0};
-    double bEta[2] = {0};
+    double bEta[2] = {2};
     double bEtaPower[2] = {0};
 
     double gainStart = 0.0;
