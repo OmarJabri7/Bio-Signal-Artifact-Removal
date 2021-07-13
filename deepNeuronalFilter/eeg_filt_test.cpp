@@ -50,10 +50,15 @@ boost::circular_buffer<double> l3Buf(bufferLength);
 boost::circular_buffer<double> lmsBuf(bufferLength);
 double outerDelayLine[outerDelayLineLength] = {0.0};
 boost::circular_buffer<double> innerDelayLine(innerDelayLineLength);
+/** Setup vector to hold SNRs up to interval of grid search */
+std::vector<double> snrs;
+/** Setup vector to hold max SNRs*/
+std::vector<double> maxSnrs;
 /** Setup constants */
 const int subjectNbs = 12;
 const int numTrials = 1;
-
+/** Grid Search Interval: */
+const int gridInterval = 2000;
 #ifdef doOuterDelayLine
 int inputNum = outerDelayLineLength;
 #else
@@ -70,7 +75,7 @@ int plotH = 720;
 
 /** Setup Neural Network + Parameters */
 #ifdef DoDeepLearning
-int nNeurons[NLAYERS] = {N10, N9, N8, N7, N6, N5, N4, N3, N2, N1, N0};
+int nNeurons[NLAYERS] = {N12, N11, N10, N9, N8, N7, N6, N5, N4, N3, N2, N1, N0};
 int *numNeuronsP = nNeurons;
 int numInputs = 1;
 Net *NN = new Net(NLAYERS, numNeuronsP, numInputs, 0, "DNF");
@@ -111,7 +116,43 @@ double minOuter[subjectNbs] = {-0.242428, 0.018594, 0.02451, -0.030434, 0.017505
 
 double maxInner[subjectNbs] = {0.065437, 0.020443, 0.04627, -0.045858, 0.025139, 0.03142, 0.034559, 0.020988, 0.023555, 0.02876, 0.037338, 0.025004};
 double maxOuter[subjectNbs] = {-0.237441, 0.0204, 0.026195, -0.016322, 0.019166, -0.252538, -0.249347, 0.03356, 0.037242, 0.037324, 0.041945, 0.031098};
+// template <typename T>
+std::vector<double> linspace(double start_in, double end_in, double num_in)
+{
 
+    std::vector<double> linspaced;
+
+    double start = static_cast<double>(start_in);
+    double end = static_cast<double>(end_in);
+    double num = static_cast<double>(num_in);
+
+    if (num == 0)
+    {
+        return linspaced;
+    }
+    if (num == 1)
+    {
+        linspaced.push_back(start);
+        return linspaced;
+    }
+
+    double delta = (end - start) / (num - 1);
+
+    for (int i = 0; i < num - 1; ++i)
+    {
+        linspaced.push_back(start + delta * i);
+    }
+    linspaced.push_back(end); // I want to ensure that start and end
+                              // are exactly the same as the input
+    return linspaced;
+}
+void print_vector(std::vector<double> vec)
+{
+    std::cout << "size: " << vec.size() << std::endl;
+    for (double d : vec)
+        std::cout << d << " ";
+    std::cout << std::endl;
+}
 /** Method to save parameters regarding neural network adjustments */
 void saveParam()
 {
@@ -129,8 +170,8 @@ void saveParam()
                << "Network: "
                << "\n"
                << NLAYERS << "\n"
-               //    << N12 << "\n"
-               //    << N11 << "\n"
+               << N12 << "\n"
+               << N11 << "\n"
                << N10 << "\n"
                << N9 << "\n"
                << N8 << "\n"
@@ -207,9 +248,27 @@ void handleFiles()
     laplaceFile.close();
     lmsRemoverFile.close();
 }
-
+/** Setup parameters for grid search */
+std::vector<double> outerGainParams = linspace(0.1, 20, 20);
+std::vector<double> innerGainParams = linspace(0.1, 20, 20);
+std::vector<double> removerGainParams = linspace(0.1, 20, 20);
+std::vector<double> feedbackGainParams = linspace(0.1, 1, 20);
+std::vector<double> wEtaParams = linspace(0.1, 10, 10);
+std::vector<double> wPowParams = linspace(-10, 10, 20);
+std::vector<double> bEtaParams = linspace(0.1, 10, 10);
+std::vector<double> bPowParams = linspace(-10, 10, 20);
+std::vector<std::vector<double>> params = {
+    outerGainParams,
+    innerGainParams,
+    removerGainParams, feedbackGainParams,
+    wEtaParams, bEtaParams};
+int paramSamples = 250;
+double newParam;
+double snrFNN;
 int main(int argc, const char *argv[])
 {
+    print_vector(feedbackGainParams);
+
     std::srand(1);
     for (int k = 0; k < subjectNbs; k++)
     {
@@ -282,10 +341,49 @@ int main(int argc, const char *argv[])
 #ifdef DoDeepLearning
         NN->initNetwork(Neuron::W_RANDOM, Neuron::B_RANDOM, Neuron::Act_Sigmoid);
 #endif
-
+        int paramCount = 0;
+        int inParam = 0;
+        double maxSnr;
         while (!eegInfile.eof())
         {
+
             count += 1;
+            // if (paramCount <= params.size())
+            // {
+            //     if (count > 2000)
+            //     {
+            //         if (count % 3000 == 0.0)
+            //         {
+            //             inParam = 0;
+            //             cout << "Final Vector gains:" << endl;
+            //             print_vector(snrs);
+            //             int idx = std::distance(snrs.begin(), std::max_element(snrs.begin(), snrs.end()));
+            //             snrs = {};
+            //             maxSnrs.push_back(maxSnr);
+            //             maxSnr = 0;
+            //             newParam = params[paramCount][idx];
+            //             cout << paramCount << " new param: " << newParam;
+            //             plots->set_params(paramCount, 0, newParam);
+            //             paramSamples = int(gridInterval / params[paramCount].size());
+            //             paramCount++;
+            //         }
+            //     }
+            //     if (count > 500)
+            //     {
+
+            //         if (count % 150 == 0.0)
+            //         {
+            //             if (snrFNN > maxSnr)
+            //             {
+            //                 maxSnr = snrFNN;
+            //             }
+            //             snrs.push_back(snrFNN);
+            //             inParam++;
+            //             newParam = params[paramCount][inParam];
+            //             plots->set_params(paramCount, 0, newParam);
+            //         }
+            //     }
+            // }
             /** Extract Data from TSV files {Inner, Outer} */
             eegInfile >> sampleNum >> innerRawData >> outerRawData >> oddBall;
             // GET ALL GAINS:
@@ -345,12 +443,12 @@ int main(int argc, const char *argv[])
             NN->setBackwardError(fNN);
             NN->propErrorBackward();
 #endif
-            double sumFNN = std::accumulate(WIN.begin(), WIN.end(), 0);
-            double avgFNN = sumFNN / WIN.size();
-            double varFNN = 0;
-            double sqSumFNN = std::inner_product(WIN.begin(), WIN.end(), WIN.begin(), 0.0);
-            double stdFNN = std::sqrt(sqSumFNN / WIN.size() - avgFNN * avgFNN);
-            double snrFNN = (stdFNN > 0.0) ? avgFNN / stdFNN : 0.0;
+            // double sumFNN = std::accumulate(WIN.begin(), WIN.end(), 0);
+            // double avgFNN = sumFNN / WIN.size();
+            // double varFNN = 0;
+            // double sqSumFNN = std::inner_product(WIN.begin(), WIN.end(), WIN.begin(), 0.0);
+            // double stdFNN = std::sqrt(sqSumFNN / WIN.size() - avgFNN * avgFNN);
+            // snrFNN = (stdFNN > 0.0) ? avgFNN / stdFNN : 0.0;
             snrFNN = pow(fNN, 2) / pow(outerRaw, 2);
             /** Network learning */
 #ifdef DoDeepLearning
@@ -480,6 +578,8 @@ int main(int argc, const char *argv[])
         saveParam();
         handleFiles();
         eegInfile.close();
+        cout << "Final SNRs" << endl;
+        print_vector(maxSnrs);
         cout << "The program has reached the end of the input file" << endl;
     }
     freeMemory();

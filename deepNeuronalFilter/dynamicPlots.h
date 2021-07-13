@@ -43,19 +43,51 @@ public:
     inline double get_inner_gain(int closed_or_open) { return inner_gain[closed_or_open]; }
     inline double get_remover_gain(int closed_or_open) { return remover_gain[closed_or_open]; }
     inline double get_feedback_gain(int closed_or_open) { return feedback_gain[closed_or_open]; }
+    inline void set_wEta(int closed_or_open, double wEtaNew, double wEtaPowNew) { wEta[closed_or_open] = wEtaNew * pow(10, wEtaPowNew); }
+    inline void set_bEta(int closed_or_open, double bEtaNew, double bEtaPowNew) { bEta[closed_or_open] = bEtaNew * pow(10, bEtaPowNew); }
+    inline void set_outer_gain(int closed_or_open, double outerGainNew) { outer_gain[closed_or_open] = outerGainNew; }
+    inline void set_inner_gain(int closed_or_open, double innerGainNew) { inner_gain[closed_or_open] = innerGainNew; }
+    inline void set_remover_gain(int closed_or_open, double removerGainNew) { remover_gain[closed_or_open] = removerGainNew; }
+    inline void set_feedback_gain(int closed_or_open, double feedbackGainNew) { feedback_gain[closed_or_open] = feedbackGainNew; }
+    inline void set_params(int idx, int closed_or_open, double newVal)
+    {
+        switch (idx)
+        {
+        case 0:
+            set_outer_gain(closed_or_open, newVal);
+            break;
+        case 1:
+            set_inner_gain(closed_or_open, newVal);
+            break;
+        case 2:
+            set_remover_gain(closed_or_open, newVal);
+            break;
+        case 3:
+            set_feedback_gain(closed_or_open, newVal);
+            break;
+        case 4:
+            set_wEta(closed_or_open, newVal, 0.0);
+            break;
+        case 5:
+            set_bEta(closed_or_open, newVal, 0.0);
+            break;
+        default:
+            break;
+        }
+    }
 
 private:
     cv::Mat frame;
 
     // variable          {closed, open}
-    double outer_gain[2] = {10};
-    double inner_gain[2] = {5};
-    double remover_gain[2] = {5};
-    double feedback_gain[2] = {0.1};
-    double wEta[2] = {2};
-    double wEtaPower[2] = {0.5};
-    double bEta[2] = {3};
-    double bEtaPower[2] = {-0.5};
+    double outer_gain[1] = {1.1};
+    double inner_gain[1] = {19.0};
+    double remover_gain[1] = {8.5};
+    double feedback_gain[1] = {0.1};
+    double wEta[1] = {0.1};
+    double wEtaPower[1] = {0.5};
+    double bEta[1] = {1.2};
+    double bEtaPower[1] = {-0.5};
 
     double gainStart = 0.0;
     double gainEnd = 20.0;
