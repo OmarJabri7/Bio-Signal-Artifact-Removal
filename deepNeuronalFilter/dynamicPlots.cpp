@@ -59,10 +59,11 @@ void dynaPlots::plotMainSignals(std::vector<double> outer_raw, std::vector<doubl
     double inner_max = *max_element(inner.begin(), inner.end());
     double inner_v = *inner.end();
     double snr_sum = std::accumulate(snr.begin(), snr.end(), 0);
-    double snr_mean = snr_sum / snr.size();
+    double snr_mean = (snr_sum / snr.size());
     double snr_min = *min_element(snr.begin(), snr.end());
     double snr_max = *max_element(snr.begin(), snr.end());
     double snr_v = *snr.end();
+    // cout << snr_mean << endl;
     double remover_min = *min_element(remover.begin(), remover.end());
     double remover_max = *max_element(remover.begin(), remover.end());
     double remover_v = *remover.end();
@@ -84,10 +85,10 @@ void dynaPlots::plotMainSignals(std::vector<double> outer_raw, std::vector<doubl
     cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "inner: raw(b) & filtered(w)");
     cvui::printf(frame, graphX, graphY * step + topOffset + graphDY + lineEnter, "min: %+.5lf max: %+.5lf value: %+.5lf", inner_min, inner_max, inner_v);
     step++;
-    cvui::sparkline(frame, snr, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff); //white
-    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "SNR");
-    cvui::printf(frame, graphX, graphY * step + topOffset + graphDY + lineEnter, "min: %+.5lf max: %+.5lf value: %+.5lf", snr_min, snr_max, snr_mean);
-    step++;
+    // cvui::sparkline(frame, snr, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff); //white
+    // cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "SNR");
+    // cvui::printf(frame, graphX, graphY * step + topOffset + graphDY + lineEnter, "min: %+.5lf max: %+.5lf value: %+.5lf", snr_min, snr_max, snr_mean);
+    // step++;
     cvui::sparkline(frame, remover, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff); //white
     cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "remover");
     cvui::printf(frame, graphX, graphY * step + topOffset + graphDY + lineEnter, "min: %+.5lf max: %+.5lf value: %+.5lf", remover_min, remover_max, remover_v);

@@ -48,14 +48,14 @@ private:
     cv::Mat frame;
 
     // variable          {closed, open}
-    double outer_gain[2] = {0.5};
+    double outer_gain[2] = {10};
     double inner_gain[2] = {5};
-    double remover_gain[2] = {1.8};
+    double remover_gain[2] = {5};
     double feedback_gain[2] = {0.1};
-    double wEta[2] = {1};
-    double wEtaPower[2] = {0};
-    double bEta[2] = {2};
-    double bEtaPower[2] = {0};
+    double wEta[2] = {2};
+    double wEtaPower[2] = {0.5};
+    double bEta[2] = {3};
+    double bEtaPower[2] = {-0.5};
 
     double gainStart = 0.0;
     double gainEnd = 20.0;
