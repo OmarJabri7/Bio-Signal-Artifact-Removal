@@ -167,15 +167,15 @@ eyes_closed_outer = eyes_closed[:, 2]
 zeros = np.zeros(len(fake_eeg))
 sig_fake = np.column_stack((fake_eeg, noise, zeros))
 signal_df = pd.DataFrame(sig_fake)
-signal_df.to_csv(f"deepNeuronalFilter/SubjectData/EEG_Subject{sbj}.tsv",
-                 index=True, header=False,  sep="\t")
+# signal_df.to_csv(f"deepNeuronalFilter/SubjectData/EEG_Subject{sbj}.tsv",
+#                  index=True, header=False,  sep="\t")
 dnf_res = pd.read_csv(
     f"deepNeuronalFilter/cppData/subject{sbj}/fnn_subject{sbj}.tsv", sep=" ")
 res = dnf_res.values
 init = 2000
 res = res[init:N + init, 0]
 res_var = np.var(res)
-res_pow = plot_welch(res, Fs, "", False)
+# res_pow = plot_welch(res, Fs, "", False)
 res_pow = np.abs(np.fft.fft(res))**2
 Pn = 1/N*(np.sum(noise[:res.shape[0]]**2))
 Pr = 1/N*(np.sum(res**2))
