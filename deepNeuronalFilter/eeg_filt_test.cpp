@@ -52,10 +52,12 @@ double outerDelayLine[outerDelayLineLength] = {0.0};
 boost::circular_buffer<double> innerDelayLine(innerDelayLineLength);
 /** Setup vector to hold SNRs up to interval of grid search */
 std::vector<double> snrs;
+std::vector<double> outputs;
 /** Setup vector to hold max SNRs*/
 std::vector<double> maxSnrs;
+std::vector<double> minOutputs;
 /** Setup constants */
-const int subjectNbs = 12;
+const int subjectNbs = 2;
 const int numTrials = 1;
 /** Grid Search Interval: */
 const int gridInterval = 2000;
@@ -89,7 +91,7 @@ Fir1 *innerFilter[numTrials];
 Fir1 *lmsFilter = nullptr;
 
 /** Setup signal types */
-double sampleNum, innerRawData, outerRawData, oddBall;
+double sampleNum, innerRawData, outerRawData;
 
 /** Setup Initial Gains */
 double outerGain = 1;
@@ -103,6 +105,7 @@ double feedbackGain = 0;
 fstream nnFile, removerFile, weightFile;
 #endif
 fstream innerFile;
+fstream snrFile;
 fstream outerFile;
 fstream paramsFile;
 fstream lmsFile;
@@ -111,17 +114,16 @@ fstream laplaceFile;
 ifstream eegInfile;
 
 /** Min-Max Values for subjects */
-double minInner[subjectNbs] = {0.063815, 0.018529, 0.04342, -0.058632, 0.022798, 0.014187, 0.031754, 0.038395, 0.024306, 0.025857, 0.036683, 0.023497};
-double minOuter[subjectNbs] = {-0.242428, 0.018594, 0.02451, -0.030434, 0.017505, -0.254623, -0.250294, 0.032478, 0.036081, 0.036793, 0.040581, 0.029097};
+// double minInner[subjectNbs] = {0.063815, 0.018529, 0.04342, -0.058632, 0.022798, 0.014187, 0.031754, 0.038395, 0.024306, 0.025857, 0.036683, 0.023497};
+// double minOuter[subjectNbs] = {-0.242428, 0.018594, 0.02451, -0.030434, 0.017505, -0.254623, -0.250294, 0.032478, 0.036081, 0.036793, 0.040581, 0.029097};
 
-double maxInner[subjectNbs] = {0.065437, 0.020443, 0.04627, -0.045858, 0.025139, 0.03142, 0.034559, 0.020988, 0.023555, 0.02876, 0.037338, 0.025004};
-double maxOuter[subjectNbs] = {-0.237441, 0.0204, 0.026195, -0.016322, 0.019166, -0.252538, -0.249347, 0.03356, 0.037242, 0.037324, 0.041945, 0.031098};
+// double maxInner[subjectNbs] = {0.065437, 0.020443, 0.04627, -0.045858, 0.025139, 0.03142, 0.034559, 0.020988, 0.023555, 0.02876, 0.037338, 0.025004};
+// double maxOuter[subjectNbs] = {-0.237441, 0.0204, 0.026195, -0.016322, 0.019166, -0.252538, -0.249347, 0.03356, 0.037242, 0.037324, 0.041945, 0.031098};
 // template <typename T>
 std::vector<double> linspace(double start_in, double end_in, double num_in)
 {
 
     std::vector<double> linspaced;
-
     double start = static_cast<double>(start_in);
     double end = static_cast<double>(end_in);
     double num = static_cast<double>(num_in);
@@ -170,6 +172,8 @@ void saveParam()
                << "Network: "
                << "\n"
                << NLAYERS << "\n"
+               << N14 << "\n"
+               << N13 << "\n"
                << N12 << "\n"
                << N11 << "\n"
                << N10 << "\n"
@@ -237,6 +241,7 @@ void freeMemory()
 void handleFiles()
 {
     paramsFile.close();
+    snrFile.close();
 #ifdef DoDeepLearnig
     weightFile.close();
     removerFile.close();
@@ -253,9 +258,9 @@ std::vector<double> outerGainParams = linspace(0.1, 20, 20);
 std::vector<double> innerGainParams = linspace(0.1, 20, 20);
 std::vector<double> removerGainParams = linspace(0.1, 20, 20);
 std::vector<double> feedbackGainParams = linspace(0.1, 1, 20);
-std::vector<double> wEtaParams = linspace(0.1, 10, 10);
+std::vector<double> wEtaParams = linspace(0.1, 10, 20);
 std::vector<double> wPowParams = linspace(-10, 10, 20);
-std::vector<double> bEtaParams = linspace(0.1, 10, 10);
+std::vector<double> bEtaParams = linspace(0.1, 10, 20);
 std::vector<double> bPowParams = linspace(-10, 10, 20);
 std::vector<std::vector<double>> params = {
     outerGainParams,
@@ -270,9 +275,10 @@ int main(int argc, const char *argv[])
     print_vector(feedbackGainParams);
 
     std::srand(1);
-    for (int k = 0; k < subjectNbs; k++)
+    for (int k = 0; k < subjectNbs; k++) // TODO: CHange back to 0
     {
-        int SUBJECT = k + 1;
+        // ofstream snrFile;
+        int SUBJECT = k;
         cout << "subject: " << SUBJECT << endl;
         int count = 0;
         //setting up the interactive window and the dynamic plot class
@@ -283,8 +289,9 @@ int main(int argc, const char *argv[])
 #endif
         //create files for saving the data and parameters
         string sbjct = std::to_string(SUBJECT);
-#ifdef DoDeepLearning
         nnFile.open("./cppData/subject" + sbjct + "/fnn_subject" + sbjct + ".tsv", fstream::out);
+        snrFile.open("./cppData/subject" + sbjct + "/snr_subject" + sbjct + ".tsv", fstream::out);
+#ifdef DoDeepLearning
         removerFile.open("./cppData/subject" + sbjct + "/remover_subject" + sbjct + ".tsv", fstream::out);
         weightFile.open("./cppData/subject" + sbjct + "/lWeights_closed_subject" + sbjct + ".tsv", fstream::out);
 #endif
@@ -348,51 +355,53 @@ int main(int argc, const char *argv[])
         {
 
             count += 1;
-            // if (paramCount <= params.size())
-            // {
-            //     if (count > 2000)
-            //     {
-            //         if (count % 3000 == 0.0)
-            //         {
-            //             inParam = 0;
-            //             cout << "Final Vector gains:" << endl;
-            //             print_vector(snrs);
-            //             int idx = std::distance(snrs.begin(), std::max_element(snrs.begin(), snrs.end()));
-            //             snrs = {};
-            //             maxSnrs.push_back(maxSnr);
-            //             maxSnr = 0;
-            //             newParam = params[paramCount][idx];
-            //             cout << paramCount << " new param: " << newParam;
-            //             plots->set_params(paramCount, 0, newParam);
-            //             paramSamples = int(gridInterval / params[paramCount].size());
-            //             paramCount++;
-            //         }
-            //     }
-            //     if (count > 500)
-            //     {
+            if (paramCount < params.size())
+            {
+                if (count >= 3000)
+                {
+                    if (count % 3000 == 0.0)
+                    {
+                        cout << "Param NO: " << paramCount << endl;
+                        inParam = 0;
+                        cout << "Final Vector gains:" << endl;
+                        print_vector(snrs);
+                        int idx = std::distance(snrs.begin(), std::max_element(snrs.begin(), snrs.end()));
+                        snrs = {};
+                        maxSnrs.push_back(maxSnr);
+                        maxSnr = 0;
+                        newParam = params[paramCount][idx];
+                        cout << paramCount << " new param: " << newParam << endl;
+                        plots->set_params(paramCount, SUBJECT, newParam);
+                        paramSamples = int(gridInterval / params[paramCount].size());
+                        paramCount++;
+                    }
+                }
+                if (count > 500)
+                {
 
-            //         if (count % 150 == 0.0)
-            //         {
-            //             if (snrFNN > maxSnr)
-            //             {
-            //                 maxSnr = snrFNN;
-            //             }
-            //             snrs.push_back(snrFNN);
-            //             inParam++;
-            //             newParam = params[paramCount][inParam];
-            //             plots->set_params(paramCount, 0, newParam);
-            //         }
-            //     }
-            // }
+                    if (count % 150 == 0.0)
+                    {
+                        if (snrFNN > maxSnr)
+                        {
+                            maxSnr = snrFNN;
+                        }
+                        snrs.push_back(snrFNN);
+                        inParam++;
+                        newParam = params[paramCount][inParam];
+                        plots->set_params(paramCount, SUBJECT, newParam);
+                    }
+                }
+            }
             /** Extract Data from TSV files {Inner, Outer} */
-            eegInfile >> sampleNum >> innerRawData >> outerRawData >> oddBall;
+            eegInfile >>
+                sampleNum >> innerRawData >> outerRawData;
             // GET ALL GAINS:
 #ifdef DoDeepLearning
 #ifdef DoShowPlots
-            innerGain = plots->get_inner_gain(0);
-            outerGain = plots->get_outer_gain(0);
-            removerGain = plots->get_remover_gain(0);
-            feedbackGain = plots->get_feedback_gain(0);
+            innerGain = plots->get_inner_gain(SUBJECT);
+            outerGain = plots->get_outer_gain(SUBJECT);
+            removerGain = plots->get_remover_gain(SUBJECT);
+            feedbackGain = plots->get_feedback_gain(SUBJECT);
 #else
             innerGain = 100;
             outerGain = 100;
@@ -402,7 +411,7 @@ int main(int argc, const char *argv[])
 #endif
 
             /** A) INNER ELECTRODE:  ADJUST & AMPLIFY */
-            double innerRaw = 1 * innerGain * (innerRawData - minInner[SUBJECT]); //2) FILTERED
+            double innerRaw = 1 * innerGain * (innerRawData); //- minInner[SUBJECT]); //2) FILTERED
 #ifdef doInnerPreFilter
             double innerFiltered = innerFilter[0]->filter(innerRaw);
 #else
@@ -416,7 +425,7 @@ int main(int argc, const char *argv[])
             double inner = innerFiltered;
 #endif
             /** B) OUTER ELECTRODE: ADJUST & AMPLIFY */
-            double outerRaw = 1 * outerGain * (outerRawData - minOuter[SUBJECT]); //2) FILTERED
+            double outerRaw = 1 * outerGain * (outerRawData); // - minOuter[SUBJECT]); //2) FILTERED
 #ifdef doOuterPreFilter
             double outer = outerFilter[0]->filter(outerRaw);
 #else
@@ -449,12 +458,13 @@ int main(int argc, const char *argv[])
             // double sqSumFNN = std::inner_product(WIN.begin(), WIN.end(), WIN.begin(), 0.0);
             // double stdFNN = std::sqrt(sqSumFNN / WIN.size() - avgFNN * avgFNN);
             // snrFNN = (stdFNN > 0.0) ? avgFNN / stdFNN : 0.0;
-            snrFNN = pow(fNN, 2) / pow(outerRaw, 2);
+            // snrFNN = pow(fNN, 2) / pow(outerRaw, 2);
+            snrFNN = fNN / outerRaw;
             /** Network learning */
 #ifdef DoDeepLearning
 #ifdef DoShowPlots
-            wEta = plots->get_wEta(0);
-            bEta = plots->get_bEta(0);
+            wEta = plots->get_wEta(SUBJECT);
+            bEta = plots->get_bEta(SUBJECT);
 #else
             wEta = 1;
             bEta = 2;
@@ -491,6 +501,7 @@ int main(int argc, const char *argv[])
             laplaceFile << laplace << endl;
             innerFile << inner << endl;
             outerFile << outer << endl;
+            snrFile << snrFNN << endl;
 #ifdef DoDeepLearning
             removerFile << removerNN << endl;
             nnFile << fNN << endl;
@@ -551,9 +562,10 @@ int main(int argc, const char *argv[])
             std::vector<double> l2Plot = {0};
             std::vector<double> l3Plot = {0};
 #endif
-            plots->plotMainSignals(outerRawPlot, outerPlot, outerEndPlot, innerRawPlot, innerPlot, snrPlot, removerPlot, fNNPlot,
+            plots->plotMainSignals(outerRawPlot, outerRawPlot, outerRawPlot, innerRawPlot, innerRawPlot, snrPlot, removerPlot, fNNPlot,
                                    l1Plot, l2Plot, l3Plot, lmsPlot, 0);
-            plots->plotVariables(0);
+            plots->plotVariables(SUBJECT);
+            // plots->plotSNR(snrPlot);
             plots->plotTitle(count, duration);
             cvui::update();
             cv::imshow(WINDOW, frame);
@@ -580,6 +592,7 @@ int main(int argc, const char *argv[])
         eegInfile.close();
         cout << "Final SNRs" << endl;
         print_vector(maxSnrs);
+        // snrFile << snrs;
         cout << "The program has reached the end of the input file" << endl;
     }
     freeMemory();
