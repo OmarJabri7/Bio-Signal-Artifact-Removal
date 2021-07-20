@@ -355,43 +355,43 @@ int main(int argc, const char *argv[])
         {
 
             count += 1;
-            if (paramCount < params.size())
-            {
-                if (count >= 3000)
-                {
-                    if (count % 3000 == 0.0)
-                    {
-                        cout << "Param NO: " << paramCount << endl;
-                        inParam = 0;
-                        cout << "Final Vector gains:" << endl;
-                        print_vector(snrs);
-                        int idx = std::distance(snrs.begin(), std::max_element(snrs.begin(), snrs.end()));
-                        snrs = {};
-                        maxSnrs.push_back(maxSnr);
-                        maxSnr = 0;
-                        newParam = params[paramCount][idx];
-                        cout << paramCount << " new param: " << newParam << endl;
-                        plots->set_params(paramCount, SUBJECT, newParam);
-                        paramSamples = int(gridInterval / params[paramCount].size());
-                        paramCount++;
-                    }
-                }
-                if (count > 500)
-                {
+            // if (paramCount < params.size())
+            // {
+            //     if (count >= 3000)
+            //     {
+            //         if (count % 3000 == 0.0)
+            //         {
+            //             cout << "Param NO: " << paramCount << endl;
+            //             inParam = 0;
+            //             cout << "Final Vector gains:" << endl;
+            //             print_vector(snrs);
+            //             int idx = std::distance(snrs.begin(), std::max_element(snrs.begin(), snrs.end()));
+            //             snrs = {};
+            //             maxSnrs.push_back(maxSnr);
+            //             maxSnr = 0;
+            //             newParam = params[paramCount][idx];
+            //             cout << paramCount << " new param: " << newParam << endl;
+            //             plots->set_params(paramCount, SUBJECT, newParam);
+            //             // paramSamples = int(gridInterval / params[paramCount].size());
+            //             paramCount++;
+            //         }
+            //     }
+            //     if (count > 500 && paramCount < params.size())
+            //     {
 
-                    if (count % 150 == 0.0)
-                    {
-                        if (snrFNN > maxSnr)
-                        {
-                            maxSnr = snrFNN;
-                        }
-                        snrs.push_back(snrFNN);
-                        inParam++;
-                        newParam = params[paramCount][inParam];
-                        plots->set_params(paramCount, SUBJECT, newParam);
-                    }
-                }
-            }
+            //         if (count % 150 == 0.0)
+            //         {
+            //             if (snrFNN > maxSnr)
+            //             {
+            //                 maxSnr = snrFNN;
+            //             }
+            //             snrs.push_back(snrFNN);
+            //             inParam++;
+            //             newParam = params[paramCount][inParam];
+            //             plots->set_params(paramCount, SUBJECT, newParam);
+            //         }
+            //     }
+            // }
             /** Extract Data from TSV files {Inner, Outer} */
             eegInfile >>
                 sampleNum >> innerRawData >> outerRawData;
@@ -448,7 +448,7 @@ int main(int argc, const char *argv[])
             double fNN = (innerRaw - removerNN) * feedbackGain;
             WIN.push_back(fNN);
             // FEEDBACK TO THE NETWORK
-            NN->setErrorCoeff(0, 1, 0, 0, 0, 0); //global, back, mid, forward, local, echo error
+            NN->setErrorCoeff(0, 0, 1, 0, 0, 0); //global, back, mid, forward, local, echo error
             NN->setBackwardError(fNN);
             NN->propErrorBackward();
 #endif
@@ -565,7 +565,7 @@ int main(int argc, const char *argv[])
             plots->plotMainSignals(outerRawPlot, outerRawPlot, outerRawPlot, innerRawPlot, innerRawPlot, snrPlot, removerPlot, fNNPlot,
                                    l1Plot, l2Plot, l3Plot, lmsPlot, 0);
             plots->plotVariables(SUBJECT);
-            // plots->plotSNR(snrPlot);
+            plots->plotSNR(snrPlot);
             plots->plotTitle(count, duration);
             cvui::update();
             cv::imshow(WINDOW, frame);

@@ -27,6 +27,8 @@ public:
     dynaPlots(cv::Mat &_learningFrame, int _plotW, int _plotH);
     ~dynaPlots();
 
+    void plotSNR(std::vector<double> snr);
+
     void plotMainSignals(std::vector<double> outer_raw, std::vector<double> outer, std::vector<double> outer_end,
                          std::vector<double> inner_raw, std::vector<double> inner, std::vector<double> snr,
                          std::vector<double> remover, std::vector<double> fnn,
@@ -79,15 +81,22 @@ public:
 private:
     cv::Mat frame;
 
-    // variable          {closed, open}
-    double outer_gain[1] = {1.1};
-    double inner_gain[1] = {19.0};
-    double remover_gain[1] = {8.5};
-    double feedback_gain[1] = {0.1};
-    double wEta[1] = {0.1};
-    double wEtaPower[1] = {0.5};
-    double bEta[1] = {1.2};
-    double bEtaPower[1] = {-0.5};
+    // noise type          {relax , blink, sudoku}
+    // Relax parameters Locked in.
+    double outer_gain[3] = {
+        0.1,
+        0.1,
+        0.1};
+    double inner_gain[3] = {
+        18.9526,
+        16.8579,
+        18.9};
+    double remover_gain[3] = {8.6, 1.14737, 8.4};
+    double feedback_gain[3] = {0.194737, 0.194737, 0.1};
+    double wEta[3] = {3.2, 8.43684, 1.58};
+    double wEtaPower[3] = {0.5, 0.5, 0.5};
+    double bEta[3] = {1.0, 0.621053, 1.2};
+    double bEtaPower[3] = {-0.5, -0.5, -0.5};
 
     double gainStart = 0.0;
     double gainEnd = 20.0;
