@@ -1,8 +1,8 @@
+from noise_source import EEG_Noise
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.signal as sig
 import pandas as pd
-from eeg import EEG
 from scipy.signal import butter, lfilter
 from param_search import fit_sin
 from scipy.io import loadmat
@@ -194,6 +194,7 @@ def filter_banks(signal, fs, nfilt, NFFT):
 print("Show Plots: (y|n)")
 show_plots = input().lower()
 sbjcts = 2
+noise_sbj = 21
 subj_no = "00"
 sudoku_dat = np.loadtxt('Data/subj27/sudoku.dat')
 blink_dat = np.loadtxt('Data/subj27/blink.dat')
@@ -217,38 +218,45 @@ sin2eeg = dic["amp"]*np.sin(dic["omega"]*t + dic["phase"]) + dic["offset"]
 x = np.arange(N)
 A = 0.1
 y = A*np.sin(2 * np.pi * f * x / Fs)
-# %%
-# Add AWGN based on desired SNR
 y = y[:N]
+# Create Noise Object
+# Add AWGN based on desired SNR
 sudoku_noise = sudoku_dat[:N, 1]
 sudoku_noise_2 = sudoku_dat[:N, 2]
 blink_noise = blink_dat[:N, 1]
 blink_noise_2 = blink_dat[:N, 2]
 relax_noise = relax_dat[:N, 1]
 relax_noise = relax_dat[:N, 2]
-noise = [relax_noise, blink_noise, sudoku_noise]
-signals = [y, sin2eeg]
-for sbj in range(sbjcts):
+noises = {"lie_relax": relax_noise,
+          "blink": blink_noise}  # , "sudoku": sudoku_noise}
+# signals = [y, sin2eeg]
+# %%
+# for sbj in range(sbjcts):
+sbj = 0
+for name, noise in noises.items():
     print(f"Subject {sbj}: ")
-    fake_eeg = signals[sbj] + noise[sbj]
+    fake_eeg = y + noise
+    eeg_noise = EEG_Noise(noise_sbj, name, fake_eeg)
+    eeg_noise.doAllCalcs(1, 95)
+    # print("Noisy SNR : " + str(eeg_noise.getSNR()) + " dB")
     # eeg_pow = plot_welch(fake_eeg, Fs, "", False)
     eeg_pow = np.abs(np.fft.fft(fake_eeg))**2
     Ps = 1/N * (np.sum(fake_eeg**2))
     # noise_pow = plot_welch(noise, Fs, "", False)
-    noise_pow = np.abs(np.fft.fft(noise[sbj]))**2
+    noise_pow = np.abs(np.fft.fft(noise))**2
     # noise_pow = noise[sbj]**2
-    Pn = 1/N*(np.sum(noise[sbj]**2))
-    noise_var = np.var(noise[sbj])
+    Pn = 1/N*(np.sum(noise**2))
+    noise_var = np.var(noise)
     sig_var = np.var(fake_eeg)
     gain = 0.1
     fake_eeg *= gain
-    noise[sbj] *= gain
+    noise *= gain
     # SNR = signaltonoise(fake_eeg)
-    # SNR = calc_SNR(noise_var, sig_var)
+    SNR = calc_SNR(noise_var, sig_var)
     # SNR = 20*np.log10(np.mean(eeg_pow/noise_pow))
-    SNR = 10 * np.log10(np.abs(Ps - Pn)/Pn)
+    # SNR = 10 * np.log10(np.abs(Ps - Pn)/Pn)
     # SNR = get_SNR(fake_eeg, noise[sbj], fake_eeg, [0], [0], 8, 12, N)
-    snrs = fake_eeg**2/noise[sbj]**2
+    snrs = fake_eeg**2/noise**2
     # SNR = np.mean(snrs)
     print(f"SNR: {SNR} dB")
     eyes_closed = np.loadtxt('Data/Novel_Subject.tsv')
@@ -256,8 +264,8 @@ for sbj in range(sbjcts):
     eyes_closed_outer = eyes_closed[:, 2]
     zeros = np.zeros(len(fake_eeg))
     eeg_fb = filter_banks(fake_eeg, Fs, nfilt=40, NFFT=512)
-    noise_fb = filter_banks(noise[sbj], Fs, nfilt=40, NFFT=512)
-    sig_fake = np.column_stack((fake_eeg, noise[sbj]))
+    noise_fb = filter_banks(noise, Fs, nfilt=40, NFFT=512)
+    sig_fake = np.column_stack((fake_eeg, noise))
     signal_df = pd.DataFrame(sig_fake)
     # signal_df.to_csv(f"deepNeuronalFilter/SubjectData/EEG_Subject{sbj}.tsv",
     #                  index=True, header=False,  sep="\t")
@@ -273,30 +281,35 @@ for sbj in range(sbjcts):
     # res_pow = plot_welch(res, Fs, "", False)
     res_pow = np.abs(np.fft.fft(dnf_res))**2
     # res_pow = dnf_res**2
-    Pn = 1/N*(np.sum(noise[sbj]**2))
+    Pn = 1/N*(np.sum(noise**2))
     Pr = 1/N*(np.sum(dnf_res**2))
     Prem = 1/N * np.sum(remover_res ** 2)
     Plms = 1/N*(np.sum(lms_res**2))
     # SNR_NEW = signaltonoise(res)
-    # SNR_NEW = calc_SNR(noise_var, res_var)
+    SNR_DNF = calc_SNR(noise_var, res_var)
     # SNR_NEW = 20*np.log10(np.mean(res_pow/noise_pow[:dnf_res.shape[0]]))
-    SNR_DNF = 10*np.log10(np.abs(Pr - Pn)/Pn)
+    # SNR_DNF = 10*np.log10(np.abs(Pr - Pn)/Pn)
     # SNR_DNF = get_SNR(dnf_res, noise[sbj], dnf_res, 0, 0, 8, 12, N)
-    SNR_REM = 10*np.log10(np.abs(Prem - Pn)/Pn)
+    # SNR_REM = 10*np.log10(np.abs(Prem - Pn)/Pn)
     # SNR_REM = get_SNR(remover_res, noise[sbj], remover_res, 0, 0, 8, 12, N)
     snrs_new = np.loadtxt(
         f"deepNeuronalFilter/cppData/subject{sbj}/snr_subject{sbj}.tsv")
     SNR_NEW = np.mean(snrs_new)
+    eeg_noise = EEG_Noise(noise_sbj, name, dnf_res)
+    eeg_noise.doAllCalcs(1, 95)
+    # print("DNF SNR : " + str(eeg_noise.getSNR()) + " dB")
     print(f"SNR DNF: {SNR_DNF} dB")
-    print(f"SNR REM: {SNR_REM} dB")
-    print(f"SNR LMS: {10*np.log10(np.abs((Plms - Pn)/Pn))} dB")
+    # print(f"SNR REM: {SNR_REM} dB")
+    # print(f"SNR LMS: {10*np.log10(np.abs((Plms - Pn)/Pn))} dB")
     if(show_plots == "y"):
         # plt.show()
         plot_time_series(fake_eeg, "Fake EEG")
         plot_time_series(noise, "Noise")
         plot_time_series(dnf_res, "DNF Result")
+        plot_time_series(remover_res, "Remover Result")
         plot_time_series(eyes_closed_inner, "Real EEG")
-        plot_time_series(snrs_new, "SNRS NEW")
         plot_freq_resp(fake_eeg, Fs, "Fake EEG")
         plot_freq_resp(dnf_res, Fs, "DNF result")
+        plot_freq_resp(remover_res, Fs, "Remover Result")
         plot_freq_resp(eyes_closed_inner, Fs, "Real EEG")
+    sbj += 1
