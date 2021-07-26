@@ -1,8 +1,6 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o"
-  "CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o.d"
-  "CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o"
-  "CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o.d"
+  "CMakeFiles/eeg_filter.dir/dnf_test.cpp.o"
+  "CMakeFiles/eeg_filter.dir/dnf_test.cpp.o.d"
   "eeg_filter"
   "eeg_filter.pdb"
 )

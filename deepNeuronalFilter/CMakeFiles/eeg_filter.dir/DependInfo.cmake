@@ -8,8 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/dynamicPlots.cpp" "CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o" "gcc" "CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o.d"
-  "/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/eeg_filter_demo.cpp" "CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o" "gcc" "CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o.d"
+  "/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/dnf_test.cpp" "CMakeFiles/eeg_filter.dir/dnf_test.cpp.o" "gcc" "CMakeFiles/eeg_filter.dir/dnf_test.cpp.o.d"
   )
 
 # Targets to which this target links.

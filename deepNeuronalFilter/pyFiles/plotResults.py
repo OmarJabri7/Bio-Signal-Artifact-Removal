@@ -98,7 +98,7 @@ for sweeper in range(sweepFrom, sweepTo):
             filterDelay = cpp_params[myData]
             fs = 250
 
-            nn_2d_data = np.loadtxt('../cppData{}/subject{}/nn_subject{}.tsv'.format(fileName[myData], subject, subject),
+            nn_2d_data = np.loadtxt('../cppData{}/subject{}/fnn_subject{}.tsv'.format(fileName[myData], subject, subject),
                                     dtype=float)
             closed_nn_data = nn_2d_data[:, 0]
             opened_nn_data = nn_2d_data[:, 1]

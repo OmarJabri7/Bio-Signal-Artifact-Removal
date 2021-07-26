@@ -84,18 +84,18 @@ private:
     // noise type          {relax , blink, sudoku}
     // Relax parameters Locked in.
     double outer_gain[3] = {
-        0.1,
+        1.1,
         0.1,
         0.1};
     double inner_gain[3] = {
         18.9526,
-        16.8579,
+        15.8105,
         18.9};
-    double remover_gain[3] = {8.6, 1.14737, 8.4};
-    double feedback_gain[3] = {0.194737, 0.194737, 0.1};
-    double wEta[3] = {3.2, 8.43684, 1.58};
+    double remover_gain[3] = {8.5, 8.4, 8.4};
+    double feedback_gain[3] = {0.1, 1, 0.1};
+    double wEta[3] = {0.1, 1.66316, 1.58};
     double wEtaPower[3] = {0.5, 0.5, 0.5};
-    double bEta[3] = {1.0, 0.621053, 1.2};
+    double bEta[3] = {1.2, 0.621053, 1.2};
     double bEtaPower[3] = {-0.5, -0.5, -0.5};
 
     double gainStart = 0.0;

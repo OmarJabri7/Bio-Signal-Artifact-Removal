@@ -1,5 +1,4 @@
 from numpy.lib.twodim_base import eye
-from eeg import EEG
 import scipy.optimize
 import numpy
 import numpy as np

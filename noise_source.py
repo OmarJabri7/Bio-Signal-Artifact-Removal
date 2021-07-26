@@ -65,27 +65,35 @@ class EEG_Noise:
         f = a[:, 0]
         p = a[:, 1]
         psd = interp1d(f, p, kind='cubic')
+        # return psd
         bandpower = 0
         for f2 in np.arange(self.f_signal_min, self.f_signal_max):
-            bandpower = bandpower + (10**psd(f2)) * \
-                (self.eegFilterFrequencyResponse[f2]**2)
+            bandpower = bandpower + (10**psd(f2))  # * \
+            # (self.eegFilterFrequencyResponse[f2]**2)
         return bandpower
 
     def calculateParalysedEEGVariance(self):
         self.pureEEGVar = 0
         self.pureEEGVar = self.pureEEGVar + \
-            self.readParalysedEEGVarianceFromWhithamEtAl("sub1a.dat")
+            self.readParalysedEEGVarianceFromWhithamEtAl(
+                "Data/Pure_EEG/sub1a.dat")
         self.pureEEGVar = self.pureEEGVar + \
-            self.readParalysedEEGVarianceFromWhithamEtAl("sub1b.dat")
+            self.readParalysedEEGVarianceFromWhithamEtAl(
+                "Data/Pure_EEG/sub1b.dat")
         self.pureEEGVar = self.pureEEGVar + \
-            self.readParalysedEEGVarianceFromWhithamEtAl("sub1c.dat")
+            self.readParalysedEEGVarianceFromWhithamEtAl(
+                "Data/Pure_EEG/sub1c.dat")
         self.pureEEGVar = self.pureEEGVar + \
-            self.readParalysedEEGVarianceFromWhithamEtAl("sub2a.dat")
+            self.readParalysedEEGVarianceFromWhithamEtAl(
+                "Data/Pure_EEG/sub2a.dat")
         self.pureEEGVar = self.pureEEGVar + \
-            self.readParalysedEEGVarianceFromWhithamEtAl("sub2b.dat")
+            self.readParalysedEEGVarianceFromWhithamEtAl(
+                "Data/Pure_EEG/sub2b.dat")
         self.pureEEGVar = self.pureEEGVar + \
-            self.readParalysedEEGVarianceFromWhithamEtAl("sub2c.dat")
+            self.readParalysedEEGVarianceFromWhithamEtAl(
+                "Data/Pure_EEG/sub2c.dat")
         self.pureEEGVar = self.pureEEGVar / 6.0
+        return self.pureEEGVar
 
     # Loads the data from the database
     # this is a private function and there is no need to call it

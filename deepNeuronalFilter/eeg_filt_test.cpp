@@ -57,7 +57,7 @@ std::vector<double> outputs;
 std::vector<double> maxSnrs;
 std::vector<double> minOutputs;
 /** Setup constants */
-const int subjectNbs = 2;
+const int subjectNbs = 1;
 const int numTrials = 1;
 /** Grid Search Interval: */
 const int gridInterval = 2000;
@@ -77,9 +77,9 @@ int plotH = 720;
 
 /** Setup Neural Network + Parameters */
 #ifdef DoDeepLearning
-int nNeurons[NLAYERS] = {N12, N11, N10, N9, N8, N7, N6, N5, N4, N3, N2, N1, N0};
+int nNeurons[NLAYERS] = {N22, N21, N20, N19, N18, N17, N16, N15, N14, N13, N12, N11, N10, N9, N8, N7, N6, N5, N4, N3, N2, N1, N0};
 int *numNeuronsP = nNeurons;
-int numInputs = 1;
+int numInputs = outerDelayLineLength;
 Net *NN = new Net(NLAYERS, numNeuronsP, numInputs, 0, "DNF");
 double wEta = 0;
 double bEta = 0;
@@ -272,7 +272,6 @@ double newParam;
 double snrFNN;
 int main(int argc, const char *argv[])
 {
-    print_vector(feedbackGainParams);
 
     std::srand(1);
     for (int k = 0; k < subjectNbs; k++) // TODO: CHange back to 0
@@ -344,7 +343,7 @@ int main(int argc, const char *argv[])
         double corrLMS = 0;
         double lmsOutput = 0;
 
-        //setting up the neural networks
+        //setting up the neural network
 #ifdef DoDeepLearning
         NN->initNetwork(Neuron::W_RANDOM, Neuron::B_RANDOM, Neuron::Act_Sigmoid);
 #endif
@@ -445,21 +444,22 @@ int main(int argc, const char *argv[])
 
             // REMOVER OUTPUT FROM NETWORK
             double removerNN = NN->getOutput(0) * removerGain;
-            double fNN = (innerRaw - removerNN) * feedbackGain;
+            // cout << removerNN << endl;
+            double fNN = (inner - removerNN) * feedbackGain;
             WIN.push_back(fNN);
             // FEEDBACK TO THE NETWORK
-            NN->setErrorCoeff(0, 0, 1, 0, 0, 0); //global, back, mid, forward, local, echo error
+            NN->setErrorCoeff(0, 1, 0, 0, 0, 0); //global, back, mid, forward, local, echo error
             NN->setBackwardError(fNN);
             NN->propErrorBackward();
 #endif
-            // double sumFNN = std::accumulate(WIN.begin(), WIN.end(), 0);
-            // double avgFNN = sumFNN / WIN.size();
-            // double varFNN = 0;
-            // double sqSumFNN = std::inner_product(WIN.begin(), WIN.end(), WIN.begin(), 0.0);
-            // double stdFNN = std::sqrt(sqSumFNN / WIN.size() - avgFNN * avgFNN);
-            // snrFNN = (stdFNN > 0.0) ? avgFNN / stdFNN : 0.0;
-            // snrFNN = pow(fNN, 2) / pow(outerRaw, 2);
-            snrFNN = fNN / outerRaw;
+            double sumFNN = std::accumulate(WIN.begin(), WIN.end(), 0);
+            double avgFNN = sumFNN / WIN.size();
+            double varFNN = 0;
+            double sqSumFNN = std::inner_product(WIN.begin(), WIN.end(), WIN.begin(), 0.0);
+            double stdFNN = std::sqrt(sqSumFNN / WIN.size() - avgFNN * avgFNN);
+            snrFNN = (stdFNN > 0.0) ? avgFNN / stdFNN : 0.0;
+            snrFNN = pow(fNN, 2) / pow(outerRaw, 2);
+            // snrFNN = fNN / outerRaw;
             /** Network learning */
 #ifdef DoDeepLearning
 #ifdef DoShowPlots
@@ -565,7 +565,7 @@ int main(int argc, const char *argv[])
             plots->plotMainSignals(outerRawPlot, outerRawPlot, outerRawPlot, innerRawPlot, innerRawPlot, snrPlot, removerPlot, fNNPlot,
                                    l1Plot, l2Plot, l3Plot, lmsPlot, 0);
             plots->plotVariables(SUBJECT);
-            plots->plotSNR(snrPlot);
+            // plots->plotSNR(snrPlot);
             plots->plotTitle(count, duration);
             cvui::update();
             cv::imshow(WINDOW, frame);

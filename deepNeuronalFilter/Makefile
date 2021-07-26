@@ -142,53 +142,29 @@ CLDL/fast:
 	$(MAKE) $(MAKESILENT) -f DNF/CMakeFiles/CLDL.dir/build.make DNF/CMakeFiles/CLDL.dir/build
 .PHONY : CLDL/fast
 
-dynamicPlots.o: dynamicPlots.cpp.o
-.PHONY : dynamicPlots.o
+dnf_test.o: dnf_test.cpp.o
+.PHONY : dnf_test.o
 
 # target to build an object file
-dynamicPlots.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/eeg_filter.dir/build.make CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o
-.PHONY : dynamicPlots.cpp.o
+dnf_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/eeg_filter.dir/build.make CMakeFiles/eeg_filter.dir/dnf_test.cpp.o
+.PHONY : dnf_test.cpp.o
 
-dynamicPlots.i: dynamicPlots.cpp.i
-.PHONY : dynamicPlots.i
-
-# target to preprocess a source file
-dynamicPlots.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/eeg_filter.dir/build.make CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.i
-.PHONY : dynamicPlots.cpp.i
-
-dynamicPlots.s: dynamicPlots.cpp.s
-.PHONY : dynamicPlots.s
-
-# target to generate assembly for a file
-dynamicPlots.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/eeg_filter.dir/build.make CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.s
-.PHONY : dynamicPlots.cpp.s
-
-eeg_filter_demo.o: eeg_filter_demo.cpp.o
-.PHONY : eeg_filter_demo.o
-
-# target to build an object file
-eeg_filter_demo.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/eeg_filter.dir/build.make CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o
-.PHONY : eeg_filter_demo.cpp.o
-
-eeg_filter_demo.i: eeg_filter_demo.cpp.i
-.PHONY : eeg_filter_demo.i
+dnf_test.i: dnf_test.cpp.i
+.PHONY : dnf_test.i
 
 # target to preprocess a source file
-eeg_filter_demo.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/eeg_filter.dir/build.make CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.i
-.PHONY : eeg_filter_demo.cpp.i
+dnf_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/eeg_filter.dir/build.make CMakeFiles/eeg_filter.dir/dnf_test.cpp.i
+.PHONY : dnf_test.cpp.i
 
-eeg_filter_demo.s: eeg_filter_demo.cpp.s
-.PHONY : eeg_filter_demo.s
+dnf_test.s: dnf_test.cpp.s
+.PHONY : dnf_test.s
 
 # target to generate assembly for a file
-eeg_filter_demo.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/eeg_filter.dir/build.make CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.s
-.PHONY : eeg_filter_demo.cpp.s
+dnf_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/eeg_filter.dir/build.make CMakeFiles/eeg_filter.dir/dnf_test.cpp.s
+.PHONY : dnf_test.cpp.s
 
 # Help Target
 help:
@@ -200,12 +176,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... CLDL"
 	@echo "... eeg_filter"
-	@echo "... dynamicPlots.o"
-	@echo "... dynamicPlots.i"
-	@echo "... dynamicPlots.s"
-	@echo "... eeg_filter_demo.o"
-	@echo "... eeg_filter_demo.i"
-	@echo "... eeg_filter_demo.s"
+	@echo "... dnf_test.o"
+	@echo "... dnf_test.i"
+	@echo "... dnf_test.s"
 .PHONY : help
 
 

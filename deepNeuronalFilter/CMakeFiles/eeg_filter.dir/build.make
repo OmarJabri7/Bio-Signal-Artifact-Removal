@@ -69,44 +69,28 @@ include CMakeFiles/eeg_filter.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/eeg_filter.dir/flags.make
 
-CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o: CMakeFiles/eeg_filter.dir/flags.make
-CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o: eeg_filter_demo.cpp
-CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o: CMakeFiles/eeg_filter.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o"
-	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o -MF CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o.d -o CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o -c "/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/eeg_filter_demo.cpp"
+CMakeFiles/eeg_filter.dir/dnf_test.cpp.o: CMakeFiles/eeg_filter.dir/flags.make
+CMakeFiles/eeg_filter.dir/dnf_test.cpp.o: dnf_test.cpp
+CMakeFiles/eeg_filter.dir/dnf_test.cpp.o: CMakeFiles/eeg_filter.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/eeg_filter.dir/dnf_test.cpp.o"
+	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/eeg_filter.dir/dnf_test.cpp.o -MF CMakeFiles/eeg_filter.dir/dnf_test.cpp.o.d -o CMakeFiles/eeg_filter.dir/dnf_test.cpp.o -c "/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/dnf_test.cpp"
 
-CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.i"
-	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/eeg_filter_demo.cpp" > CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.i
+CMakeFiles/eeg_filter.dir/dnf_test.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/eeg_filter.dir/dnf_test.cpp.i"
+	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/dnf_test.cpp" > CMakeFiles/eeg_filter.dir/dnf_test.cpp.i
 
-CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.s"
-	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/eeg_filter_demo.cpp" -o CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.s
-
-CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o: CMakeFiles/eeg_filter.dir/flags.make
-CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o: dynamicPlots.cpp
-CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o: CMakeFiles/eeg_filter.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o"
-	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o -MF CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o.d -o CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o -c "/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/dynamicPlots.cpp"
-
-CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.i"
-	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/dynamicPlots.cpp" > CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.i
-
-CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.s"
-	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/dynamicPlots.cpp" -o CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.s
+CMakeFiles/eeg_filter.dir/dnf_test.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/eeg_filter.dir/dnf_test.cpp.s"
+	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/dnf_test.cpp" -o CMakeFiles/eeg_filter.dir/dnf_test.cpp.s
 
 # Object files for target eeg_filter
 eeg_filter_OBJECTS = \
-"CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o" \
-"CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o"
+"CMakeFiles/eeg_filter.dir/dnf_test.cpp.o"
 
 # External object files for target eeg_filter
 eeg_filter_EXTERNAL_OBJECTS =
 
-eeg_filter: CMakeFiles/eeg_filter.dir/eeg_filter_demo.cpp.o
-eeg_filter: CMakeFiles/eeg_filter.dir/dynamicPlots.cpp.o
+eeg_filter: CMakeFiles/eeg_filter.dir/dnf_test.cpp.o
 eeg_filter: CMakeFiles/eeg_filter.dir/build.make
 eeg_filter: DNF/libCLDL.a
 eeg_filter: /usr/local/lib/libiir.1.9.0.dylib
@@ -132,7 +116,7 @@ eeg_filter: /usr/local/opt/opencv@2/lib/libopencv_imgproc.2.4.13.dylib
 eeg_filter: /usr/local/opt/opencv@2/lib/libopencv_flann.2.4.13.dylib
 eeg_filter: /usr/local/opt/opencv@2/lib/libopencv_core.2.4.13.dylib
 eeg_filter: CMakeFiles/eeg_filter.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir="/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable eeg_filter"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir="/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable eeg_filter"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/eeg_filter.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

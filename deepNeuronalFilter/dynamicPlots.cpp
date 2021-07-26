@@ -42,6 +42,20 @@ dynaPlots::dynaPlots(cv::Mat &_frame, int _plotW, int _plotH)
 }
 dynaPlots::~dynaPlots() = default;
 
+void dynaPlots::plotSNR(std::vector<double> snr)
+{
+    int graphX = gapX + 1 * (plotW / 2);
+    double snr_sum = std::accumulate(snr.begin(), snr.end(), 0);
+    double snr_mean = (snr_sum / snr.size());
+    double snr_min = *min_element(snr.begin(), snr.end());
+    double snr_max = *max_element(snr.begin(), snr.end());
+    double snr_v = *snr.end();
+    int step = 0;
+    cvui::sparkline(frame, snr, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff); //black
+    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "SNR: raw(b)");
+    cvui::printf(frame, graphX, graphY * step + topOffset + graphDY + lineEnter, "min: %+.5lf max: %+.5lf value: %+.5lf", snr_min, snr_max, snr_mean);
+}
+
 void dynaPlots::plotMainSignals(std::vector<double> outer_raw, std::vector<double> outer, std::vector<double> outer_end,
                                 std::vector<double> inner_raw, std::vector<double> inner, std::vector<double> snr,
                                 std::vector<double> remover, std::vector<double> fnn,
@@ -58,11 +72,6 @@ void dynaPlots::plotMainSignals(std::vector<double> outer_raw, std::vector<doubl
     double inner_min = *min_element(inner.begin(), inner.end());
     double inner_max = *max_element(inner.begin(), inner.end());
     double inner_v = *inner.end();
-    double snr_sum = std::accumulate(snr.begin(), snr.end(), 0);
-    double snr_mean = (snr_sum / snr.size());
-    double snr_min = *min_element(snr.begin(), snr.end());
-    double snr_max = *max_element(snr.begin(), snr.end());
-    double snr_v = *snr.end();
     // cout << snr_mean << endl;
     double remover_min = *min_element(remover.begin(), remover.end());
     double remover_max = *max_element(remover.begin(), remover.end());
@@ -74,15 +83,15 @@ void dynaPlots::plotMainSignals(std::vector<double> outer_raw, std::vector<doubl
     double l1_max = *max_element(l1_plot.begin(), l1_plot.end());
 
     int step = 0;
-    cvui::sparkline(frame, outer_raw, graphX, graphY * step + topOffset, graphDX, graphDY, 0x000000); //black
-    cvui::sparkline(frame, outer, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff);     //white
-    cvui::sparkline(frame, outer_end, graphX, graphY * step + topOffset, graphDX, graphDY, 0x7d7d7d); //gray
-    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "Outer: raw(b) & filtered(w) & end(gray)");
+    cvui::sparkline(frame, outer_raw, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff); //black
+    // cvui::sparkline(frame, outer, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff);     //white
+    // cvui::sparkline(frame, outer_end, graphX, graphY * step + topOffset, graphDX, graphDY, 0x7d7d7d); //gray
+    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "Outer: raw(b)");
     cvui::printf(frame, graphX, graphY * step + topOffset + graphDY + lineEnter, "min: %+.5lf max: %+.5lf value: %+.5lf", outer_min, outer_max, outer_v);
     step++;
-    cvui::sparkline(frame, inner_raw, graphX, graphY * step + topOffset, graphDX, graphDY, 0x000000); //black
-    cvui::sparkline(frame, inner, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff);     //white
-    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "inner: raw(b) & filtered(w)");
+    cvui::sparkline(frame, inner_raw, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff); //black
+    // cvui::sparkline(frame, inner, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff);     //white
+    cvui::text(frame, graphX, graphY * step + topOffset + graphDY, "Inner: raw(b)");
     cvui::printf(frame, graphX, graphY * step + topOffset + graphDY + lineEnter, "min: %+.5lf max: %+.5lf value: %+.5lf", inner_min, inner_max, inner_v);
     step++;
     // cvui::sparkline(frame, snr, graphX, graphY * step + topOffset, graphDX, graphDY, 0xffffff); //white
@@ -108,7 +117,7 @@ void dynaPlots::plotMainSignals(std::vector<double> outer_raw, std::vector<doubl
 
 void dynaPlots::plotVariables(int closed_or_open)
 {
-    int graphX = gapX + closed_or_open * (plotW / 2);
+    int graphX = gapX + 0 * (plotW / 2);
     int barX = graphDX + graphX + gapX;
 
     int step = 0;
