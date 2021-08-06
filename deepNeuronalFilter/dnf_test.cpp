@@ -17,6 +17,7 @@
 #include "cldl/Net.h"
 #include "parameters.h"
 #include "tqdm.h"
+#include "ProgressBar.h"
 
 std::vector<double> linspace(double start_in, double end_in, double num_in)
 {
@@ -74,12 +75,7 @@ fstream lmsRemoverFile;
 fstream laplaceFile;
 ifstream eegInfile;
 
-int subjectsNb = 1;
-
-int nNeurons[NLAYERS] = {N22, N21, N20, N19, N18, N17, N16, N15, N14, N13, N12, N11, N10, N9, N8, N7, N6, N5, N4, N3, N2, N1, N0};
-int *numNeuronsP = nNeurons;
-int numInputs = 1;
-Net *NN = new Net(NLAYERS, numNeuronsP, numInputs, 0, "DNF");
+int subjectsNb = 4;
 
 std::vector<double> minErrors;
 
@@ -90,22 +86,43 @@ double errorNN;
 double outerGain, innerGain, removerGain, fnnGain, w, b;
 double outerDelayLine[outerDelayLineLength] = {0.0};
 boost::circular_buffer<double> innerDelayLine(innerDelayLineLength);
-int inputNum = outerDelayLineLength;
+int numInputs = outerDelayLineLength;
+// int numInputs = 1;
+int nNeurons[NLAYERS] = {
+    N12, N11, N10, N9, N8, N7, N6, N5, N4, N3, N2, N1, N0};
+int *numNeuronsP = nNeurons;
+Net *NN = new Net(NLAYERS, numNeuronsP, numInputs, 0, "DNF");
+const int numTrials = 1;
+Fir1 *outerFilter[numTrials];
+Fir1 *innerFilter[numTrials];
+Fir1 *lmsFilter = nullptr;
+void closeFiles()
+{
+    eegInfile.close();
+    paramsFile.close();
+    weightFile.close();
+    removerFile.close();
+    nnFile.close();
+    innerFile.close();
+    outerFile.close();
+    lmsFile.close();
+    lmsRemoverFile.close();
+}
 int main(int argc, const char *argv[])
 {
-    outerGain = 10.1;
-    innerGain = 19.0;
-    removerGain = 2.5;
-    fnnGain = 0.5;
-    w = 0.31622776601683794;
-    b = 2.0;
+    outerGain = 20;
+    innerGain = 0.5;
+    removerGain = 10.5;
+    fnnGain = 1;
+    w = 0.01;
+    b = 0;
     cout << "Remover gain: " << removerGain << endl;
     cout << "Feedback gain: " << fnnGain << endl;
     cout << "Weight ETA: " << w << endl;
     cout << "Bias ETA: " << b << endl;
-
-    for (int s : tqdm::range(subjectsNb))
+    for (int s = 0; s < subjectsNb; s++)
     {
+        cout << NLAYERS << endl;
         double startTime = time(NULL);
         int SUBJECT = s;
         int count = 0;
@@ -118,17 +135,45 @@ int main(int argc, const char *argv[])
         outerFile.open("./cppData/subject" + sbjct + "/outer_subject" + sbjct + ".tsv", fstream::out);
         paramsFile.open("./cppData/subject" + sbjct + "/cppParams_subject" + sbjct + ".tsv", fstream::out);
         eegInfile.open("./SubjectData/EEG_Subject" + sbjct + ".tsv");
+        lmsFile.open("./cppData/subject" + sbjct + "/lmsOutput_subject" + sbjct + ".tsv", fstream::out);
+        lmsRemoverFile.open("./cppData/subject" + sbjct + "/lmsCorrelation_subject" + sbjct + ".tsv", fstream::out);
         // while (paramsFile.eof())
         // {
         //     paramsFile >> removerGain;
         //     paramsFile >> fnnGain;
         //     paramsFile >> w;
         // }
+        for (int i = 0; i < numTrials; i++)
+        {
+            outerFilter[i] = new Fir1("./pyFiles/forOuter.dat");
+            outerFilter[i]->reset();
+        }
+        for (int i = 0; i < numTrials; i++)
+        {
+            innerFilter[i] = new Fir1("./pyFiles/forInner.dat");
+            innerFilter[i]->reset();
+        }
+        lmsFilter = new Fir1(LMS_COEFF);
+        lmsFilter->setLearningRate(LMS_LEARNING_RATE);
+        double corrLMS = 0;
+        double lmsOutput = 0;
         NN->initNetwork(Neuron::W_RANDOM, Neuron::B_RANDOM, Neuron::Act_Sigmoid);
         double minError;
-
+        int lineNb = 0;
+        std::string line;
         while (!eegInfile.eof())
         {
+            std::getline(eegInfile, line);
+            lineNb++;
+        }
+        cout << lineNb << endl;
+        progresscpp::ProgressBar progressBar(lineNb, 70);
+        eegInfile.close();
+        eegInfile.open("./SubjectData/EEG_Subject" + sbjct + ".tsv");
+        while (!eegInfile.eof())
+        {
+            ++progressBar;
+            progressBar.display();
             count += 1;
             eegInfile >>
                 sampleNum >> innerData >> outerData;
@@ -142,7 +187,7 @@ int main(int argc, const char *argv[])
             //             inParam = 0;
             //             cout << "Final Vector gains:" << endl;
             //             print_vector(errors);
-            //             int idx = std::distance(errors.begin(), std::max_element(errors.begin(), errors.end()));
+            //             int idx = std::distance(errors.begin(), std::min_element(errors.begin(), errors.end()));
             //             errors = {};
             //             minErrors.push_back(minError);
             //             minError = 0;
@@ -213,13 +258,15 @@ int main(int argc, const char *argv[])
             // }
             outerData *= outerGain;
             innerData *= innerGain;
-            innerDelayLine.push_back(innerData);
+            double innerFiltered = innerFilter[0]->filter(innerData);
+            innerDelayLine.push_back(innerFiltered);
             double inner = innerDelayLine[0];
+            double outer = outerFilter[0]->filter(outerData);
             for (int i = outerDelayLineLength - 1; i > 0; i--)
             {
                 outerDelayLine[i] = outerDelayLine[i - 1];
             }
-            outerDelayLine[0] = outerData;
+            outerDelayLine[0] = outer;
             double *outerDelayed = &outerDelayLine[0];
             NN->setInputs(outerDelayed); // Here Input
             NN->propInputs();
@@ -238,7 +285,16 @@ int main(int argc, const char *argv[])
             NN->setLearningRate(w, b);
             NN->updateWeights();
             NN->snapWeights("cppData", "DNF", SUBJECT);
+            corrLMS += lmsFilter->filter(outer);
+            lmsOutput = inner - corrLMS;
+
+            lmsFilter->lms_update(lmsOutput);
+            lmsFile << lmsOutput << endl;
+            lmsRemoverFile << corrLMS << endl;
+            innerFile << inner << endl;
+            outerFile << outer << endl;
         }
+        progressBar.done();
         paramsFile << NLAYERS << endl;
         paramsFile << outerDelayLineLength << endl;
         paramsFile << innerDelayLineLength << endl;
@@ -251,7 +307,7 @@ int main(int argc, const char *argv[])
         double endTime = time(nullptr);
         double duration = endTime - startTime;
         cout << "Duration: " << double(duration / 60.0) << " mins" << endl;
-        eegInfile.close();
+        closeFiles();
         cout << "The program has reached the end of the input file" << endl;
     }
 }
