@@ -438,4 +438,5 @@ CMakeFiles/eeg_filter.dir/dnf_test.cpp.o
  /Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/utils.h
  /Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk/usr/include/poll.h
  /Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk/usr/include/sys/poll.h
+ /Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/deepNeuronalFilter/ProgressBar.h
 

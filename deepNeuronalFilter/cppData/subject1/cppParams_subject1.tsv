@@ -1,36 +1,9 @@
-Gains: 
-0.1
-15.8105
-8.4
-1
-Etas: 
-5.25937
-0.196394
-Network: 
-17
-47
-42
-37
-32
-29
-23
-19
-17
-13
-11
-7
-5
-3
-2
-1
-LMS
-250
-1e-05
-didNoisePreFilter
-250
-didSignalPreFilter
-250
-didOuterDelayLine
-500
-didSignalDelay
-500
+13 13
+100 100
+100 100
+20 1
+0.5 1
+2.5 2.5
+1 0.9
+0.5 0.9
+0 0

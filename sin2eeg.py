@@ -1,4 +1,4 @@
-from noise_source import EEG_Noise
+
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -119,7 +119,7 @@ def plot_freq_resp(signal, Fs, title):
 
 
 def plot_welch(signal, Fs, title):
-    win = 10*Fs
+    win = Fs
     freqs, psd = sig.welch(signal, Fs, nperseg=win)
     plt.plot(freqs, psd, color='k', lw=2)
     plt.title(title)
@@ -210,8 +210,9 @@ sbjcts = 1
 sudoku_dat = np.loadtxt('Data/subj27/sudoku.dat')
 blink_dat = np.loadtxt('Data/subj27/blink.dat')
 relax_dat = np.loadtxt('Data/subj27/sit_relax.dat')
-ts = sudoku_dat[:, 0]
+ts = blink_dat[:, 0]
 noise_fs = 1/(ts[1] - ts[0])
+print(noise_fs)
 Fs = 1000.0
 f = 10
 N = min(sudoku_dat.shape[0], blink_dat.shape[0], relax_dat.shape[0])
@@ -226,30 +227,44 @@ blink_noise = blink_dat[:N, 1]
 blink_noise_2 = blink_dat[:N, 2]
 relax_noise = relax_dat[:N, 1]
 relax_noise_2 = relax_dat[:N, 2]
-noise = [relax_noise_2, blink_noise]
+noise = [blink_noise_2, blink_noise_2, sudoku_noise_2]
 # Setup SNR parameters for integral calculations
 Py = 1/N*(np.sum(y**2))
-# DC Removal
-# y -= np.mean(y)
 if(not os.path.exists("results.xlsx")):
     data_frame = pd.DataFrame(
-        columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta",  "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF"])
-    data_frame.to_csv("results.xlsx", index=False, sep=",")
-results_df = pd.read_excel("results.xlsx", "DNF results")
+        columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta",  "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF", "Subject Number"])
+    data_frame.to_excel(r"results.xlsx", sheet_name="DNF results", index=False)
+results_df = pd.read_excel(r"results.xlsx", "DNF results")
+sine_low = 1
+sine_high = 100
+sine_start = int((sine_low / Fs) * N)
+sine_end = int((sine_high / Fs) * N)
+diff_noise = sine_end - sine_start
+freqX = np.linspace(0, Fs / 2, int(N / 2))
 # %%
 for sbj in range(sbjcts):
     print(f"Subject {sbj}: ")
-    gain_eeg = 0.2
-    gain_noise = 0.4
-    # y *= gain_eeg
-    # noise[sbj] *= gain_noise
-    fake_eeg = y + noise[sbj]
-    fake_eeg = fake_eeg - np.mean(fake_eeg, axis=-1)
-    fake_eeg *= gain_eeg
+    gain_eeg = 0.1
+    gain_noise = 1.0
+    y *= gain_eeg
+    y_fft = np.abs(np.fft.fft(y)[
+        0: np.int(N / 2)])
+    y_integral = np.sum(y[sine_low:sine_high]) / diff_noise
     noise[sbj] *= gain_noise
+    fake_eeg = y + noise[sbj]
+    fake_eeg = butter_bandpass(fake_eeg, 1, 100, Fs, 2)
+    # fake_eeg = fake_eeg - np.mean(fake_eeg, axis=-1)
+    fake_eeg_fft = np.abs(np.fft.fft(fake_eeg)[
+        0: np.int(N / 2)])
+    noise_fft = np.abs(np.fft.fft(noise[sbj])[
+        0: np.int(N / 2)])
+    noise_integral = np.sum(noise_fft[sine_low:sine_high]) / diff_noise
+    noisy_integral = np.sum(fake_eeg_fft[sine_low:sine_high]) / diff_noise
+    # fake_eeg *= gain_eeg
+    # noise[sbj] *= gain_noise
     Ps = 1/N * (np.sum(fake_eeg**2))
     Pn = 1/N * (np.sum(noise[sbj]**2))
-    SNR = 10 * np.log10(Ps/(Pn))
+    SNR = 10 * np.log10((Ps)/(Pn))
     print(f"SNR Before: {SNR}")
     zeros = np.zeros(len(fake_eeg))
     sig_fake = np.column_stack((fake_eeg, noise[sbj]))
@@ -268,10 +283,16 @@ for sbj in range(sbjcts):
         f"deepNeuronalFilter/cppData/subject{sbj}/cppParams_subject{sbj}.tsv")
     init = 0
     dnf_res = dnf_res[init:N + init]
+    # dnf_res *= gain_eeg
+    dnf_fft = np.abs(np.fft.fft(dnf_res)[
+        0:np.int(N / 2)])
+    dnf_integral = np.sum(dnf_fft[sine_low:sine_high])/diff_noise
     Pr = 1/N*(np.sum(dnf_res**2))
     Prem = 1/N*(np.sum(remover_res**2))
     Plms = 1/N*(np.sum(lms_res**2))
-    SNR_DNF = 10*np.log10(Pr/(Pn))
+    print(dnf_integral)
+    print(noise_integral)
+    SNR_DNF = 10*np.log10((Pr)/(Pn))
     SNR_REM = 10*np.log10((Prem)/Pn)
     SNR_LMS = 10*np.log10((Plms) / (Pn))
     print(f"SNR After: {SNR_DNF}")
@@ -279,13 +300,32 @@ for sbj in range(sbjcts):
     parameters_res = np.append(parameters_res, gain_noise)
     parameters_res = np.append(parameters_res, SNR)
     parameters_res = np.append(parameters_res, SNR_DNF)
+    parameters_res = np.append(parameters_res, sbj)
     results_df = results_df.append(pd.DataFrame(
         [parameters_res], columns=results_df.columns), ignore_index=True)
     if(updt_csv == "y"):
         results_df.to_excel("results.xlsx", "DNF results", index=False)
     if(show_plots == "y"):
-        fr1 = plot_welch(fake_eeg, Fs, "Fake EEG")
-        fr2 = plot_welch(dnf_res, Fs, "DNF result")
-        fr3 = plot_welch(remover_res, Fs, "Remover Result")
-        fr4 = plot_welch(lms_res, Fs, "LMS Result")
-        multipage("Plots.pdf")
+        plot_time_series(fake_eeg,
+                         f"Original Temporal Subject {sbj}")
+        plot_time_series(noise[sbj],
+                         f"Original Temporal Subject {sbj}")
+        plot_time_series(dnf_res, f"DNF Temporal Subject {sbj}")
+        plot_time_series(remover_res,
+                         f"Remover Temporal Subject {sbj}")
+        plot_time_series(lms_res, f"LMS Temporal Subject {sbj}")
+        # fr1 = plot_freq_resp(
+        #     fake_eeg, Fs, f"Fake EEG Frequency Subject {sbj}")
+        # fr2 = plot_freq_resp(
+        #     dnf_res, Fs, f"DNF Frequency Subject {sbj}")
+        # fr3 = plot_freq_resp(
+        #     remover_res, Fs, f"Remover Frequency Subject {sbj}")
+        fr4 = plot_freq_resp(lms_res, Fs, f"LMS Frequency Subject {sbj}")
+        plt.magnitude_spectrum(fake_eeg, Fs=Fs)
+        plt.figure()
+        plt.magnitude_spectrum(dnf_res, Fs=Fs)
+        plt.figure()
+        plt.magnitude_spectrum(remover_res, Fs=Fs)
+        plt.show()
+if(show_plots == "y"):
+    multipage(f"Plots.pdf")

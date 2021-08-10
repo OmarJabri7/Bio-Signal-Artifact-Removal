@@ -77,7 +77,7 @@ int plotH = 720;
 
 /** Setup Neural Network + Parameters */
 #ifdef DoDeepLearning
-int nNeurons[NLAYERS] = {N22, N21, N20, N19, N18, N17, N16, N15, N14, N13, N12, N11, N10, N9, N8, N7, N6, N5, N4, N3, N2, N1, N0};
+int nNeurons[NLAYERS] = {N12, N11, N10, N9, N8, N7, N6, N5, N4, N3, N2, N1, N0};
 int *numNeuronsP = nNeurons;
 int numInputs = outerDelayLineLength;
 Net *NN = new Net(NLAYERS, numNeuronsP, numInputs, 0, "DNF");
@@ -439,7 +439,7 @@ int main(int argc, const char *argv[])
             double *outerDelayed = &outerDelayLine[0];
             // OUTER INPUT TO NETWORK
 #ifdef DoDeepLearning
-            NN->setInputs(outerDelayed); // Here Input
+            NN->setInputs(&outer); // Here Input
             NN->propInputs();
 
             // REMOVER OUTPUT FROM NETWORK
