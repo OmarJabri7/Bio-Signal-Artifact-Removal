@@ -5,6 +5,8 @@ from scipy.signal import butter, lfilter, filtfilt
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy
+from scipy import fftpack
+
 
 NOISE_SRC = ["blink", "eyescrunching", "flow",
              "readingsitting", "sudoku",
@@ -25,7 +27,7 @@ class EEG_GEN():
             if os.path.isdir(os.path.join(path_to_parent, fname)):
                 yield os.path.join(path_to_parent, fname)
 
-    def load_data(self, dir, eeg_subj, noise_source):
+    def load_alpha_data(self, dir, eeg_subj, noise_source):
         if("+" in noise_source):
             noises = noise_source.split("+")
             artefact = 0
@@ -33,12 +35,12 @@ class EEG_GEN():
             for noise in noises:
                 noise_lengths.append(
                     self.get_noise_length(str(eeg_subj), noise))
-            self.get_min_samples(noise_lengths)
+            N = self.get_min_samples_alpha(noise_lengths)
             for noise in noises:
                 if(self.folders_in(dir)):
                     self.artefact = np.loadtxt(
                         f"{dir}/subj{eeg_subj}/{noise}/emgeeg.dat")
-                    artefact += self.artefact[:self.samples, 2]
+                    artefact += self.artefact[:N, 2]
                     if(eeg_subj in self.noises):
                         if(noise_source in self.noises[eeg_subj]):
                             self.noises[eeg_subj][noise_source] = artefact
@@ -60,13 +62,67 @@ class EEG_GEN():
                 if(eeg_subj in self.noises):
                     if(noise_source in self.noises[eeg_subj]):
                         self.noises[eeg_subj][noise_source] = self.artefact[:, 2]
+                        self.samples_alpha = self.artefact[:, 2].shape[0]
                     else:
                         self.noises[eeg_subj][noise_source] = {}
                         self.noises[eeg_subj][noise_source] = self.artefact[:, 2]
+                        self.samples_alpha = self.artefact[:, 2].shape[0]
                 else:
                     self.noises[eeg_subj] = {}
                     self.noises[eeg_subj][noise_source] = {}
                     self.noises[eeg_subj][noise_source] = self.artefact[:, 2]
+                    self.samples_alpha = self.artefact[:, 2].shape[0]
+
+            else:
+                self.artefact = np.loadtxt(
+                    f"{dir}/subj{eeg_subj}/{noise_source}.dat")
+                self.artefact = self.artefact
+
+    def load_delta_data(self, dir, eeg_subj, noise_source):
+        if("+" in noise_source):
+            noises = noise_source.split("+")
+            artefact = 0
+            noise_lengths = []
+            for noise in noises:
+                noise_lengths.append(
+                    self.get_noise_length(str(eeg_subj), noise))
+            N = self.get_min_samples_delta(noise_lengths)
+            for noise in noises:
+                if(self.folders_in(dir)):
+                    self.artefact = np.loadtxt(
+                        f"{dir}/subj{eeg_subj}/{noise}/emgeeg.dat")
+                    artefact += self.artefact[:N, 2]
+                    if(eeg_subj in self.noises):
+                        if(noise_source in self.noises[eeg_subj]):
+                            self.noises[eeg_subj][noise_source] = artefact
+                        else:
+                            self.noises[eeg_subj][noise_source] = {}
+                            self.noises[eeg_subj][noise_source] = artefact
+                    else:
+                        self.noises[eeg_subj] = {}
+                        self.noises[eeg_subj][noise_source] = {}
+                        self.noises[eeg_subj][noise_source] = artefact
+                else:
+                    self.artefact = np.loadtxt(
+                        f"{dir}/subj{eeg_subj}/{noise_source}.dat")
+                    self.artefact = self.artefact
+        else:
+            if(self.folders_in(dir)):
+                self.artefact = np.loadtxt(
+                    f"{dir}/subj{eeg_subj}/{noise_source}/emgeeg.dat")
+                if(eeg_subj in self.noises):
+                    if(noise_source in self.noises[eeg_subj]):
+                        self.noises[eeg_subj][noise_source] = self.artefact[:, 2]
+                        self.samples_delta = self.artefact[:, 2].shape[0]
+                    else:
+                        self.noises[eeg_subj][noise_source] = {}
+                        self.noises[eeg_subj][noise_source] = self.artefact[:, 2]
+                        self.samples_delta = self.artefact[:, 2].shape[0]
+                else:
+                    self.noises[eeg_subj] = {}
+                    self.noises[eeg_subj][noise_source] = {}
+                    self.noises[eeg_subj][noise_source] = self.artefact[:, 2]
+                    self.samples_delta = self.artefact[:, 2].shape[0]
             else:
                 self.artefact = np.loadtxt(
                     f"{dir}/subj{eeg_subj}/{noise_source}.dat")
@@ -84,8 +140,13 @@ class EEG_GEN():
             ts = self.artefact[:, 0]
             self.fs = 1/(ts[1] - ts[0])
 
-    def get_min_samples(self, noise_samples):
-        self.samples = min(noise_samples)
+    def get_min_samples_alpha(self, noise_samples):
+        self.samples_alpha = min(noise_samples)
+        return self.samples_alpha
+
+    def get_min_samples_delta(self, noise_samples):
+        self.samples_delta = min(noise_samples)
+        return self.samples_delta
 
     def butter_bandpass(self, signal, lowcut, highcut, fs, order=5):
         nyq = 0.5 * fs
@@ -118,7 +179,7 @@ class EEG_GEN():
         return y
 
     def gen_sine_alpha(self, A, f, freqs, fs=1000, bandpass=False, sum_sines=False, optimal=False) -> None:
-        x = np.arange(self.samples)
+        x = np.arange(self.samples_alpha)
         self.fs = fs
         self.alpha = A * np.sin(2 * np.pi * f * x / fs)
         if(sum_sines):
@@ -133,7 +194,7 @@ class EEG_GEN():
             pass
 
     def gen_sine_delta(self, A, f, freqs, fs=1000, bandpass=False, sum_sines=False, optimal=False) -> None:
-        x = np.arange(self.samples)
+        x = np.arange(self.samples_delta)
         self.fs = fs
         self.delta = A * np.sin(2 * np.pi * f * x / fs)
         if(sum_sines):
@@ -155,36 +216,36 @@ class EEG_GEN():
             if(noise_source in self.alphas[eeg_subj]):
                 tmp_noise = self.noises[eeg_subj][noise_source]
                 self.alphas[eeg_subj][noise_source] = self.alpha + \
-                    tmp_noise[:self.samples]
+                    tmp_noise[:self.samples_alpha]
             else:
                 self.alphas[eeg_subj][noise_source] = {}
                 tmp_noise = self.noises[eeg_subj][noise_source]
                 self.alphas[eeg_subj][noise_source] = self.alpha + \
-                    tmp_noise[:self.samples]
+                    tmp_noise[:self.samples_alpha]
         else:
             self.alphas[eeg_subj] = {}
             self.alphas[eeg_subj][noise_source] = {}
             tmp_noise = self.noises[eeg_subj][noise_source]
             self.alphas[eeg_subj][noise_source] = self.alpha + \
-                tmp_noise[:self.samples]
+                tmp_noise[:self.samples_alpha]
 
     def gen_eeg_delta(self, eeg_subj, noise_source) -> None:
         if(eeg_subj in self.deltas):
             if(noise_source in self.deltas[eeg_subj]):
                 tmp_noise = self.noises[eeg_subj][noise_source]
                 self.deltas[eeg_subj][noise_source] = self.delta + \
-                    tmp_noise[:self.samples]
+                    tmp_noise[:self.samples_delta]
             else:
                 self.deltas[eeg_subj][noise_source] = {}
                 tmp_noise = self.noises[eeg_subj][noise_source]
                 self.deltas[eeg_subj][noise_source] = self.delta + \
-                    tmp_noise[:self.samples]
+                    tmp_noise[:self.samples_delta]
         else:
             self.deltas[eeg_subj] = {}
             self.deltas[eeg_subj][noise_source] = {}
             tmp_noise = self.noises[eeg_subj][noise_source]
             self.deltas[eeg_subj][noise_source] = self.delta + \
-                tmp_noise[:self.samples]
+                tmp_noise[:self.samples_delta]
 
     def gen_alpha_optimal(self, eeg_subj, noise_source):
         self.alpha_data = np.loadtxt(
@@ -231,7 +292,7 @@ class EEG_GEN():
         return 1/(10**(n - 1))
 
     def save_data(self, eeg_data, noise_data, subj, sig_type):
-        sig_fake = np.column_stack((eeg_data, noise_data[:self.samples]))
+        sig_fake = np.column_stack((eeg_data, noise_data))
         signal_df = pd.DataFrame(sig_fake)
         signal_df.to_csv(
             f"deepNeuronalFilter/SubjectData/{sig_type}/EEG_Subject{subj}.tsv", index=True, header=False, sep="\t")
@@ -281,7 +342,6 @@ class EEG_GEN():
                 0: np.int(N / 2)])
             noise_fft = np.abs(np.fft.fft(noise)[
                 0: np.int(N / 2)])
-            sig_fft[0] = 0
             noise_pow = (np.sum(noise_fft[start:end]))
             sig_pow = (np.sum(sig_fft[start:end]))
         elif(snr_fct == 2):
@@ -289,7 +349,6 @@ class EEG_GEN():
                 0: np.int(N / 2)])
             noise_fft = np.abs(np.fft.fft(noise)[
                 0: np.int(N / 2)])
-            sig_fft[0] = 0
             noise_pow = (np.sum(noise_fft[start:end]**2))
             sig_pow = (np.sum(sig_fft[start:end]**2))
         if(calc == 0):
@@ -329,23 +388,13 @@ class EEG_GEN():
         fig = plt.figure()
         return fig
 
-    def plot_freq_resp(self, signal, Fs, title):
-        fourierTransform = np.fft.fft(signal)/len(signal)
-        fourierTransform = fourierTransform[range(int(len(signal)/2))]
-        tpCount = len(signal)
-        values = np.arange(int(tpCount/2))
-        timePeriod = tpCount/Fs
-        frequencies = values/timePeriod
-        plt.plot(frequencies, abs(fourierTransform))
-        plt.title(title)
-        # plt.xlim(0, 200)
-        plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Amplitude (V)')
-        plt.savefig(f"Results-Generation/Frequency_{title}")
-        fig = plt.figure()
-        return fig
-
-    def plot_freq_resp_vs(self, signal, target, Fs, title, signal1, signal2):
+    def plot_freq_resp_vs(self, sig_type, signal, target, Fs, title, signal1, signal2):
+        if(sig_type == 0):
+            start = 8
+            end = 12
+        elif(sig_type == 1):
+            start = 1
+            end = 5
         fourierTransform = np.fft.fft(signal)/len(signal)
         fourierTransform = fourierTransform[range(int(len(signal)/2))]
         tpCount = len(signal)
@@ -358,8 +407,15 @@ class EEG_GEN():
         values2 = np.arange(int(tpCount2/2))
         timePeriod2 = tpCount2/Fs
         frequencies2 = values2/timePeriod2
-        plt.plot(frequencies, abs(fourierTransform))
-        plt.plot(frequencies2, abs(fourierTransform2))
+        idx = (np.where(np.logical_and(frequencies >= start, frequencies <= end + 1)))
+        idx2 = (np.where(np.logical_and(
+            frequencies >= start, frequencies <= end + 1)))
+        plt.plot(frequencies[idx[0][0]:idx[0]
+                 [len(idx[0]) - 1]], abs(fourierTransform[idx[0][0]:idx[0]
+                                                          [len(idx[0]) - 1]]))
+        plt.plot(frequencies2[idx2[0][0]:idx2[0]
+                 [len(idx2[0]) - 1]], abs(fourierTransform2[idx2[0][0]:idx2[0]
+                                                            [len(idx2[0]) - 1]]))
         plt.title(title)
         # plt.xlim(0, 200)
         plt.xlabel('Frequency (Hz)')
