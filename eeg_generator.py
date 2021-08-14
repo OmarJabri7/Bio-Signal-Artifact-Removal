@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from numpy import fft
 import scipy.signal as sig
 from scipy.signal import butter, lfilter, filtfilt
 import pandas as pd
@@ -284,6 +285,7 @@ class EEG_GEN():
             2 * np.pi * opt_res["omega"] * self.t + opt_res["phase"]) + opt_res["offset"]
 
     def gen_gain(self, signal) -> float:
+        signal = signal[0]
         signal = np.abs(signal)
         str_signal = str(signal)
         str_signal = str_signal.split(".")
@@ -326,35 +328,61 @@ class EEG_GEN():
     def get_noise_length(self, eeg_subj, noise_source):
         return len(self.noises[eeg_subj][noise_source])
 
-    def calc_SNR(self, signal, noise, sig_type, snr_fct, calc=0) -> float:
-        N = len(signal)
+    def band_limited_noise(self, noise, noise_lvl, min_freq, max_freq, samples=1024, samplerate=1):
+        freqs = np.abs(np.fft.fftfreq(samples, 1/samplerate))
+        f = noise
+        idx = np.where(np.logical_and(freqs < min_freq, freqs > max_freq))[0]
+        f[idx] = 1
+
+        def fftnoise(f):
+            f = np.array(f, dtype='complex')
+            Np = (len(f) - 1) // 2
+            phases = np.random.rand(Np) * 2 * np.pi
+            phases = np.cos(phases) + 1j * np.sin(phases)
+            f[1:Np+1] *= phases
+            f[-1:-1-Np:-1] = np.conj(f[1:Np+1])
+            return np.fft.ifft(f).real
+        return fftnoise(noise_lvl*f)
+
+    def calc_SNR(self, clean, noisy, sig_type, snr_fct, calc=0) -> float:
+        N = len(clean)
         if(sig_type == 0):
-            start = 8
-            end = 12
+            aS = 8
+            aE = 12
+            start = int((aS / self.fs) * N)
+            end = int((aE / self.fs) * N)
+            diff_noise = end-start
         elif(sig_type == 1):
-            start = 1
-            end = 5
+            dS = 1
+            dE = 5
+            start = int((dS / self.fs) * N)
+            end = int((dE / self.fs) * N)
+            diff_noise = end-start
         if(snr_fct == 0):
-            noise_pow = 1/N * (np.sum(noise**2))
-            sig_pow = 1/N * (np.sum(signal**2))
+            noisy_pow = 1/N * (np.sum(noisy**2))
+            clean_pow = 1/N * (np.sum(clean**2))
         elif(snr_fct == 1):
-            sig_fft = np.abs(np.fft.fft(signal)[
-                0: np.int(N / 2)])
-            noise_fft = np.abs(np.fft.fft(noise)[
-                0: np.int(N / 2)])
-            noise_pow = (np.sum(noise_fft[start:end]))
-            sig_pow = (np.sum(sig_fft[start:end]))
+            clean_fft = np.abs(np.fft.fft(clean)/len(clean))
+            clean_fft = (clean_fft[range(int(len(clean)/2))])
+            noisy_fft = np.abs(np.fft.fft(noisy)/len(noisy))
+            noisy_fft = noisy_fft[range(int(len(clean)/2))]
+            noisy_pow = (np.sum(noisy_fft[start:end]))
+            clean_pow = (np.sum(clean_fft[start:end]))
         elif(snr_fct == 2):
-            sig_fft = np.abs(np.fft.fft(signal)[
+            clean_fft = np.abs(np.fft.fft(clean)[
                 0: np.int(N / 2)])
-            noise_fft = np.abs(np.fft.fft(noise)[
+            noisy_fft = np.abs(np.fft.fft(noisy)[
                 0: np.int(N / 2)])
-            noise_pow = (np.sum(noise_fft[start:end]**2))
-            sig_pow = (np.sum(sig_fft[start:end]**2))
+            noisy_pow = (np.sum(noisy_fft[start:end]**2))
+            clean_pow = (np.sum(clean_fft[start:end]**2))
         if(calc == 0):
-            return np.abs(sig_pow - noise_pow)/noise_pow
+            print("Noisy and Clean:")
+            print(noisy_pow, clean_pow)
+            print("Diff:")
+            print(noisy_pow - clean_pow)
+            return (clean_pow)/(noisy_pow - clean_pow)
         elif(calc == 1):
-            return sig_pow/noise_pow
+            return clean_pow/noisy_pow
 
     def plot_psd(self, signal):
         freqs, psd = sig.welch(signal)

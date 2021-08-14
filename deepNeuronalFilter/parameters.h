@@ -14,16 +14,16 @@
 // NOISE:
 #define doOuterPreFilter
 #define doOuterDelayLine
-#define outerDelayLineLength 100 // CHange this
+#define outerDelayLineLength 1 // CHange this
 
 // SIGNAL:
 #define doInnerPreFilter
 #define doInnerDelay
-#define innerDelayLineLength 100 // Change this
+#define innerDelayLineLength 1 // Change this
 
 //NN specifications
 #define DoDeepLearning
-#define NLAYERS 13
+#define NLAYERS 5
 
 #define N32 101
 #define N31 96
