@@ -75,6 +75,7 @@ fstream lmsRemoverFile;
 fstream laplaceFile;
 
 ifstream eegInfilePure;
+ifstream signalToUse;
 ifstream eegInfileNoisy;
 
 int subjectsNb = 3;
@@ -91,7 +92,7 @@ double outerNoisyDelayLine[outerDelayLineLength] = {0.0};
 boost::circular_buffer<double> innerPureDelayLine(innerDelayLineLength);
 boost::circular_buffer<double> innerNoisyDelayLine(innerDelayLineLength);
 int numInputs = outerDelayLineLength;
-int nNeurons[NLAYERS] = {N4, N3, N2, N1, N0};
+int nNeurons[NLAYERS] = {N5, N4, N3, N2, N1, N0};
 int *numNeuronsP = nNeurons;
 Net *NNP = new Net(NLAYERS, numNeuronsP, numInputs, 0, "DNF Pure");
 Net *NNN = new Net(NLAYERS, numNeuronsP, numInputs, 0, "DNF Noisy");
@@ -107,7 +108,7 @@ void closeFiles()
 
     eegInfilePure.close();
     eegInfileNoisy.close();
-
+    signalToUse.close();
     weightFile.close();
     removerFile.close();
     nnFile.close();
@@ -118,38 +119,52 @@ void closeFiles()
 }
 int main(int argc, const char *argv[])
 {
-    outerGain = 5;
-    innerGain = 1;
-    removerGain = 2.5;
-    fnnGain = 1;
-    w = 0.5;
-    b = 0;
-    cout << "Outer gain: " << outerGain << endl;
-    cout << "Inner gain: " << innerGain << endl;
-    cout << "Remover gain: " << removerGain << endl;
-    cout << "Feedback gain: " << fnnGain << endl;
-    cout << "Weight ETA: " << w << endl;
-    cout << "Bias ETA: " << b << endl;
-
-    for (int s = 0; s < subjectsNb; s++)
+    signalToUse.open("signal.txt");
+    string signals;
+    signalToUse >> signals;
+    if (std::strcmp(signals, "Alpha") == 0)
+    {
+        const float outerGain[] = {20.0, 20.0, 20.0};
+        const float innerGain[] = {1.0, 1.0, 1.0};
+        const float removerGain[] = {2.5, 2.5, 2.5};
+        const float fnnGain[] = {1, 1, 1};
+        const float w[] = {0.5, 0.5, 0.0001};
+        const float b[] = {0, 0, 0};
+    }
+    else if (std::strcmp(signals, "Delta") == 0)
+    {
+        const float outerGain[] = {20.0, 20.0, 20.0};
+        const float innerGain[] = {1.0, 1.0, 1.0};
+        const float removerGain[] = {2.5, 2.5, 2.5};
+        const float fnnGain[] = {1, 1, 1};
+        const float w[] = {0.5, 0.5, 0.0001};
+        const float b[] = {0, 0, 0};
+    }
+    s for (int s = 0; s < subjectsNb; s++)
     {
         cout << NLAYERS << endl;
+        cout << outerGain[s] << endl;
+        cout << innerGain[s] << endl;
+        cout << removerGain[s] << endl;
+        cout << fnnGain[s] << endl;
+        cout << w[s] << endl;
+        cout << b[s] << endl;
         double startTime = time(NULL);
         int SUBJECT = s;
         int count = 0;
         cout << "subject: " << SUBJECT << endl;
         string sbjct = std::to_string(SUBJECT);
 
-        paramsFile.open("./cppData/subject" + sbjct + "/cppParams_subject_Alpha" + sbjct + ".tsv", fstream::out);
+        paramsFile.open("./cppData/subject" + sbjct + "/cppParams_subject_" + signals + sbjct + ".tsv", fstream::out);
 
-        nnFile.open("./cppData/subject" + sbjct + "/fnn_subject_Alpha" + sbjct + ".tsv", fstream::out);
-        removerFile.open("./cppData/subject" + sbjct + "/remover_subject_Alpha" + sbjct + ".tsv", fstream::out);
-        weightFile.open("./cppData/subject" + sbjct + "/lWeights_closed_subject_Alpha" + sbjct + ".tsv", fstream::out);
-        innerFile.open("./cppData/subject" + sbjct + "/inner_subject_Alpha" + sbjct + ".tsv", fstream::out);
-        outerFile.open("./cppData/subject" + sbjct + "/outer_subject_Alpha" + sbjct + ".tsv", fstream::out);
-        lmsFile.open("./cppData/subject" + sbjct + "/lmsOutput_subject_Alpha" + sbjct + ".tsv", fstream::out);
-        lmsRemoverFile.open("./cppData/subject" + sbjct + "/lmsCorrelation_subject_Alpha" + sbjct + ".tsv", fstream::out);
-        eegInfilePure.open("./SubjectData/Alpha/Pure/EEG_Subject" + sbjct + ".tsv");
+        nnFile.open("./cppData/subject" + sbjct + "/fnn_subject_" + signals + sbjct + ".tsv", fstream::out);
+        removerFile.open("./cppData/subject" + sbjct + "/remover_subject_" + signals + sbjct + ".tsv", fstream::out);
+        weightFile.open("./cppData/subject" + sbjct + "/lWeights_closed_subject_" + signals + sbjct + ".tsv", fstream::out);
+        innerFile.open("./cppData/subject" + sbjct + "/inner_subject_" + signals + sbjct + ".tsv", fstream::out);
+        outerFile.open("./cppData/subject" + sbjct + "/outer_subject_" + signals + sbjct + ".tsv", fstream::out);
+        lmsFile.open("./cppData/subject" + sbjct + "/lmsOutput_subject_" + signals + sbjct + ".tsv", fstream::out);
+        lmsRemoverFile.open("./cppData/subject" + sbjct + "/lmsCorrelation_subject_" + signals + sbjct + ".tsv", fstream::out);
+        eegInfilePure.open("./SubjectData/" + signals + "/Pure/EEG_Subject" + sbjct + ".tsv");
 
         for (int i = 0; i < numTrials; i++)
         {
@@ -169,7 +184,7 @@ int main(int argc, const char *argv[])
         double lmsOutputPure = 0;
         double corrLMSNoisy = 0;
         double lmsOutputNoisy = 0;
-        NNP->initNetwork(Neuron::W_RANDOM, Neuron::B_RANDOM, Neuron::Act_Sigmoid);
+        // NNP->initNetwork(Neuron::W_RANDOM, Neuron::B_RANDOM, Neuron::Act_Sigmoid);
         NNN->initNetwork(Neuron::W_RANDOM, Neuron::B_RANDOM, Neuron::Act_Sigmoid);
         double minError;
         int lineNb = 0;
@@ -182,10 +197,10 @@ int main(int argc, const char *argv[])
         cout << lineNb << endl;
         progresscpp::ProgressBar progressBar(lineNb, 70);
         eegInfilePure.close();
-        eegInfilePure.open("./SubjectData/Alpha/Pure/EEG_Subject" + sbjct + ".tsv");
-        eegInfileNoisy.open("./SubjectData/Alpha/Noisy/EEG_Subject" + sbjct + ".tsv");
+        eegInfilePure.open("./SubjectData/" + signals + "/Pure/EEG_Subject" + sbjct + ".tsv");
+        eegInfileNoisy.open("./SubjectData/" + signals + "/Noisy/EEG_Subject" + sbjct + ".tsv");
 
-        while (!eegInfilePure.eof() && !eegInfileNoisy.eof())
+        while (!eegInfileNoisy.eof())
         {
             ++progressBar;
             progressBar.display();
@@ -196,8 +211,8 @@ int main(int argc, const char *argv[])
                 sampleNumNoisy >> innerDataNoisy >> outerDataNoisy;
             // outerDataPure *= outerGain;
             // innerDataPure *= innerGain;
-            outerDataNoisy *= outerGain;
-            innerDataNoisy *= innerGain;
+            outerDataNoisy *= outerGain[s];
+            innerDataNoisy *= innerGain[s];
             // double innerFilteredPure = innerFilter[0]->filter(innerDataPure);
             double innerFilteredNoisy = innerFilter[1]->filter(innerDataNoisy);
             // innerPureDelayLine.push_back(innerDataPure);
@@ -222,13 +237,12 @@ int main(int argc, const char *argv[])
             // NNP->propInputs();
             NNN->propInputs();
             // double removerPure = NNP->getOutput(0) * removerGain;
-            double removerNoisy = NNN->getOutput(0) * removerGain;
+            double removerNoisy = NNN->getOutput(0) * removerGain[s];
             // double fNNPure = (innerPure - removerPure) * fnnGain;
-            double fNNNoisy = (innerNoisy - removerNoisy) * fnnGain;
+            double fNNNoisy = (innerNoisy - removerNoisy) * fnnGain[s];
             removerFile
                 << "-1"
                 << " " << removerNoisy << endl;
-            cout << "-1" << removerNoisy << endl;
             nnFile << "-1"
                    << " " << fNNNoisy << endl;
             // NNP->setErrorCoeff(0, 1, 0, 0, 0, 0); //global, back, mid, forward, local, echo error
@@ -240,7 +254,7 @@ int main(int argc, const char *argv[])
 
             // w /= count;
             // NNP->setLearningRate(w, b);
-            NNN->setLearningRate(w, b);
+            NNN->setLearningRate(w[s], b[s]);
 
             // NNP->updateWeights();
             NNN->updateWeights();
@@ -270,12 +284,12 @@ int main(int argc, const char *argv[])
         paramsFile << NLAYERS << endl;
         paramsFile << outerDelayLineLength << endl;
         paramsFile << innerDelayLineLength << endl;
-        paramsFile << outerGain << endl;
-        paramsFile << innerGain << endl;
-        paramsFile << removerGain << endl;
-        paramsFile << fnnGain << endl;
-        paramsFile << w << endl;
-        paramsFile << b << endl;
+        paramsFile << outerGain[s] << endl;
+        paramsFile << innerGain[s] << endl;
+        paramsFile << removerGain[s] << endl;
+        paramsFile << fnnGain[s] << endl;
+        paramsFile << w[s] << endl;
+        paramsFile << b[s] << endl;
         double endTime = time(nullptr);
         double duration = endTime - startTime;
         cout << "Duration: " << double(duration / 60.0) << " mins" << endl;

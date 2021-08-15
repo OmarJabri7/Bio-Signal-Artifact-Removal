@@ -28,7 +28,8 @@ class EEG_GEN():
             if os.path.isdir(os.path.join(path_to_parent, fname)):
                 yield os.path.join(path_to_parent, fname)
 
-    def load_alpha_data(self, dir, eeg_subj, noise_source):
+    def load_alpha_data(self, dir, data_subj, eeg_subj, noise_source):
+        idx = 1
         if("+" in noise_source):
             noises = noise_source.split("+")
             artefact = 0
@@ -40,8 +41,8 @@ class EEG_GEN():
             for noise in noises:
                 if(self.folders_in(dir)):
                     self.artefact = np.loadtxt(
-                        f"{dir}/subj{eeg_subj}/{noise}/emgeeg.dat")
-                    artefact += self.artefact[:N, 2]
+                        f"{dir}/subj{data_subj}/{noise}/emgeeg.dat")
+                    artefact += self.artefact[:N, idx]
                     if(eeg_subj in self.noises):
                         if(noise_source in self.noises[eeg_subj]):
                             self.noises[eeg_subj][noise_source] = artefact
@@ -54,32 +55,33 @@ class EEG_GEN():
                         self.noises[eeg_subj][noise_source] = artefact
                 else:
                     self.artefact = np.loadtxt(
-                        f"{dir}/subj{eeg_subj}/{noise_source}.dat")
+                        f"{dir}/subj{data_subj}/{noise_source}.dat")
                     self.artefact = self.artefact
         else:
             if(self.folders_in(dir)):
                 self.artefact = np.loadtxt(
-                    f"{dir}/subj{eeg_subj}/{noise_source}/emgeeg.dat")
+                    f"{dir}/subj{data_subj}/{noise_source}/emgeeg.dat")
                 if(eeg_subj in self.noises):
                     if(noise_source in self.noises[eeg_subj]):
-                        self.noises[eeg_subj][noise_source] = self.artefact[:, 2]
-                        self.samples_alpha = self.artefact[:, 2].shape[0]
+                        self.noises[eeg_subj][noise_source] = self.artefact[:, idx]
+                        self.samples_alpha = self.artefact[:, idx].shape[0]
                     else:
                         self.noises[eeg_subj][noise_source] = {}
-                        self.noises[eeg_subj][noise_source] = self.artefact[:, 2]
-                        self.samples_alpha = self.artefact[:, 2].shape[0]
+                        self.noises[eeg_subj][noise_source] = self.artefact[:, idx]
+                        self.samples_alpha = self.artefact[:, idx].shape[0]
                 else:
                     self.noises[eeg_subj] = {}
                     self.noises[eeg_subj][noise_source] = {}
-                    self.noises[eeg_subj][noise_source] = self.artefact[:, 2]
-                    self.samples_alpha = self.artefact[:, 2].shape[0]
+                    self.noises[eeg_subj][noise_source] = self.artefact[:, idx]
+                    self.samples_alpha = self.artefact[:, idx].shape[0]
 
             else:
                 self.artefact = np.loadtxt(
-                    f"{dir}/subj{eeg_subj}/{noise_source}.dat")
+                    f"{dir}/subj{data_subj}/{noise_source}.dat")
                 self.artefact = self.artefact
 
-    def load_delta_data(self, dir, eeg_subj, noise_source):
+    def load_delta_data(self, dir, data_subj, eeg_subj, noise_source):
+        idx = 1
         if("+" in noise_source):
             noises = noise_source.split("+")
             artefact = 0
@@ -91,8 +93,8 @@ class EEG_GEN():
             for noise in noises:
                 if(self.folders_in(dir)):
                     self.artefact = np.loadtxt(
-                        f"{dir}/subj{eeg_subj}/{noise}/emgeeg.dat")
-                    artefact += self.artefact[:N, 2]
+                        f"{dir}/subj{data_subj}/{noise}/emgeeg.dat")
+                    artefact += self.artefact[:N, idx]
                     if(eeg_subj in self.noises):
                         if(noise_source in self.noises[eeg_subj]):
                             self.noises[eeg_subj][noise_source] = artefact
@@ -105,39 +107,39 @@ class EEG_GEN():
                         self.noises[eeg_subj][noise_source] = artefact
                 else:
                     self.artefact = np.loadtxt(
-                        f"{dir}/subj{eeg_subj}/{noise_source}.dat")
+                        f"{dir}/subj{data_subj}/{noise_source}.dat")
                     self.artefact = self.artefact
         else:
             if(self.folders_in(dir)):
                 self.artefact = np.loadtxt(
-                    f"{dir}/subj{eeg_subj}/{noise_source}/emgeeg.dat")
+                    f"{dir}/subj{data_subj}/{noise_source}/emgeeg.dat")
                 if(eeg_subj in self.noises):
                     if(noise_source in self.noises[eeg_subj]):
-                        self.noises[eeg_subj][noise_source] = self.artefact[:, 2]
-                        self.samples_delta = self.artefact[:, 2].shape[0]
+                        self.noises[eeg_subj][noise_source] = self.artefact[:, idx]
+                        self.samples_delta = self.artefact[:, idx].shape[0]
                     else:
                         self.noises[eeg_subj][noise_source] = {}
-                        self.noises[eeg_subj][noise_source] = self.artefact[:, 2]
-                        self.samples_delta = self.artefact[:, 2].shape[0]
+                        self.noises[eeg_subj][noise_source] = self.artefact[:, idx]
+                        self.samples_delta = self.artefact[:, idx].shape[0]
                 else:
                     self.noises[eeg_subj] = {}
                     self.noises[eeg_subj][noise_source] = {}
-                    self.noises[eeg_subj][noise_source] = self.artefact[:, 2]
-                    self.samples_delta = self.artefact[:, 2].shape[0]
+                    self.noises[eeg_subj][noise_source] = self.artefact[:, idx]
+                    self.samples_delta = self.artefact[:, idx].shape[0]
             else:
                 self.artefact = np.loadtxt(
-                    f"{dir}/subj{eeg_subj}/{noise_source}.dat")
+                    f"{dir}/subj{data_subj}/{noise_source}.dat")
                 self.artefact = self.artefact
 
-    def get_sampling_rate(self, dir, eeg_subj, noise_source):
+    def get_sampling_rate(self, dir, data_subj, eeg_subj, noise_source):
         if(self.folders_in(dir)):
             self.artefact = np.loadtxt(
-                f"{dir}/subj{eeg_subj}/{noise_source}/emgeeg.dat")
+                f"{dir}/subj{data_subj}/{noise_source}/emgeeg.dat")
             ts = self.artefact[:, 0]
             self.fs = 1/(ts[1] - ts[0])
         else:
             self.artefact = np.loadtxt(
-                f"{dir}/subj{eeg_subj}/{noise_source}.dat")
+                f"{dir}/subj{data_subj}/{noise_source}.dat")
             ts = self.artefact[:, 0]
             self.fs = 1/(ts[1] - ts[0])
 
@@ -248,9 +250,9 @@ class EEG_GEN():
             self.deltas[eeg_subj][noise_source] = self.delta + \
                 tmp_noise[:self.samples_delta]
 
-    def gen_alpha_optimal(self, eeg_subj, noise_source):
+    def gen_alpha_optimal(self, data_subj, eeg_subj, noise_source):
         self.alpha_data = np.loadtxt(
-            f"{dir}/subj{eeg_subj}/{noise_source}/emgeeg.dat")
+            f"{dir}/subj{data_subj}/{noise_source}/emgeeg.dat")
         self.alpha_eeg = self.alpha_data[:, 1]
         self.t = self.alpha_data[:, 0]
         self.fit_sin(self.t, self.alpha_eeg)
@@ -380,7 +382,7 @@ class EEG_GEN():
             print(noisy_pow, clean_pow)
             print("Diff:")
             print(noisy_pow - clean_pow)
-            return (clean_pow)/(noisy_pow - clean_pow)
+            return (clean_pow)/np.abs(noisy_pow - clean_pow)
         elif(calc == 1):
             return clean_pow/noisy_pow
 
@@ -411,7 +413,7 @@ class EEG_GEN():
         plt.title(title)
         # plt.xlim(0, 200)
         plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Amplitude (V)')
+        plt.ylabel('Amplitude (microV)')
         plt.savefig(f"Results-Generation/Frequency_{title}")
         fig = plt.figure()
         return fig
