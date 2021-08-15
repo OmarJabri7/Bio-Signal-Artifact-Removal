@@ -78,7 +78,7 @@ ifstream eegInfilePure;
 ifstream signalToUse;
 ifstream eegInfileNoisy;
 
-int subjectsNb = 3;
+int subjectsNb = 5;
 
 std::vector<double> minErrors;
 
@@ -122,25 +122,27 @@ int main(int argc, const char *argv[])
     signalToUse.open("signal.txt");
     string signals;
     signalToUse >> signals;
-    if (std::strcmp(signals, "Alpha") == 0)
-    {
-        const float outerGain[] = {20.0, 20.0, 20.0};
-        const float innerGain[] = {1.0, 1.0, 1.0};
-        const float removerGain[] = {2.5, 2.5, 2.5};
-        const float fnnGain[] = {1, 1, 1};
-        const float w[] = {0.5, 0.5, 0.0001};
-        const float b[] = {0, 0, 0};
-    }
-    else if (std::strcmp(signals, "Delta") == 0)
-    {
-        const float outerGain[] = {20.0, 20.0, 20.0};
-        const float innerGain[] = {1.0, 1.0, 1.0};
-        const float removerGain[] = {2.5, 2.5, 2.5};
-        const float fnnGain[] = {1, 1, 1};
-        const float w[] = {0.5, 0.5, 0.0001};
-        const float b[] = {0, 0, 0};
-    }
-    s for (int s = 0; s < subjectsNb; s++)
+    cout << signals << ":" << endl;
+    // if (signals == "Alpha")
+    // {
+    const float outerGain[] = {20.0, 20.0, 20.0, 20.0, 20.0};
+    const float innerGain[] = {1.0, 1.0, 1.0, 1.0, 1.0};
+    const float removerGain[] = {2.5, 2.5, 2.5, 2.5, 2.5};
+    const float fnnGain[] = {1, 1, 1, 1, 1};
+    const float w[] = {0.5, 0.5, 0.5, 0.5, 0.5};
+    const float b[] = {0, 0, 0, 0, 0};
+    // }
+    // else if (signals == "Delta")
+    // {
+    //     cout << "HIBS USHS" << endl;
+    //     const float outerGain[] = {20.0, 20.0, 20.0, 20.0, 20.0};
+    //     const float innerGain[] = {1.0, 1.0, 1.0, 1.0, 1.0};
+    //     const float removerGain[] = {2.5, 2.5, 2.5, 2.5, 2.5};
+    //     const float fnnGain[] = {1, 1, 1, 1, 1};
+    //     const float w[] = {0.5, 0.5, 0.0001, 0.5, 0.5};
+    //     const float b[] = {0, 0, 0, 0, 0};
+    // }
+    for (int s = 0; s < subjectsNb; s++)
     {
         cout << NLAYERS << endl;
         cout << outerGain[s] << endl;
@@ -176,12 +178,12 @@ int main(int argc, const char *argv[])
             innerFilter[i] = new Fir1("./pyFiles/forInner.dat");
             innerFilter[i]->reset();
         }
-        lmsFilterPure = new Fir1(LMS_COEFF);
-        lmsFilterPure->setLearningRate(LMS_LEARNING_RATE);
+        // lmsFilterPure = new Fir1(LMS_COEFF);
+        // lmsFilterPure->setLearningRate(LMS_LEARNING_RATE);
         lmsFilterNoisy = new Fir1(LMS_COEFF);
         lmsFilterNoisy->setLearningRate(LMS_LEARNING_RATE);
-        double corrLMSPure = 0;
-        double lmsOutputPure = 0;
+        // double corrLMSPure = 0;
+        // double lmsOutputPure = 0;
         double corrLMSNoisy = 0;
         double lmsOutputNoisy = 0;
         // NNP->initNetwork(Neuron::W_RANDOM, Neuron::B_RANDOM, Neuron::Act_Sigmoid);
@@ -200,17 +202,17 @@ int main(int argc, const char *argv[])
         eegInfilePure.open("./SubjectData/" + signals + "/Pure/EEG_Subject" + sbjct + ".tsv");
         eegInfileNoisy.open("./SubjectData/" + signals + "/Noisy/EEG_Subject" + sbjct + ".tsv");
 
-        while (!eegInfileNoisy.eof())
+        while (!eegInfileNoisy.eof() && !eegInfilePure.eof())
         {
             ++progressBar;
             progressBar.display();
             count += 1;
             // eegInfilePure >>
-            // sampleNum >> innerDataPure >> outerDataPure;
+            //     sampleNum >> innerDataPure >> outerDataPure;
             eegInfileNoisy >>
                 sampleNumNoisy >> innerDataNoisy >> outerDataNoisy;
-            // outerDataPure *= outerGain;
-            // innerDataPure *= innerGain;
+            // outerDataPure *= outerGain[s];
+            // innerDataPure *= innerGain[s];
             outerDataNoisy *= outerGain[s];
             innerDataNoisy *= innerGain[s];
             // double innerFilteredPure = innerFilter[0]->filter(innerDataPure);
@@ -236,9 +238,9 @@ int main(int argc, const char *argv[])
             NNN->setInputs(outerDelayedNoisy); // Here Input
             // NNP->propInputs();
             NNN->propInputs();
-            // double removerPure = NNP->getOutput(0) * removerGain;
+            // double removerPure = NNP->getOutput(0) * removerGain[s];
             double removerNoisy = NNN->getOutput(0) * removerGain[s];
-            // double fNNPure = (innerPure - removerPure) * fnnGain;
+            // double fNNPure = (innerPure - removerPure) * fnnGain[s];
             double fNNNoisy = (innerNoisy - removerNoisy) * fnnGain[s];
             removerFile
                 << "-1"
@@ -252,8 +254,7 @@ int main(int argc, const char *argv[])
             // NNP->propErrorBackward();
             NNN->propErrorBackward();
 
-            // w /= count;
-            // NNP->setLearningRate(w, b);
+            // NNP->setLearningRate(w[s], b[s]);
             NNN->setLearningRate(w[s], b[s]);
 
             // NNP->updateWeights();

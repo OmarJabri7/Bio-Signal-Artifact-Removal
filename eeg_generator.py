@@ -22,6 +22,8 @@ class EEG_GEN():
         self.deltas = {}
         self.noises = {}
         self.fs = 1000.0
+        self.pre_amp = 500
+        self.corrfactor = 2
 
     def folders_in(self, path_to_parent):
         for fname in os.path.listdir(path_to_parent):
@@ -413,7 +415,7 @@ class EEG_GEN():
         plt.title(title)
         # plt.xlim(0, 200)
         plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Amplitude (microV)')
+        plt.ylabel('Amplitude (' + r'$\mu$V)')
         plt.savefig(f"Results-Generation/Frequency_{title}")
         fig = plt.figure()
         return fig
@@ -449,7 +451,7 @@ class EEG_GEN():
         plt.title(title)
         # plt.xlim(0, 200)
         plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Amplitude (microV)')
+        plt.ylabel('Amplitude (' + r'$\mu$V)')
         plt.legend([f"{signal1}", f"{signal2}"])
         plt.savefig(f"Results-Generation/Frequency_Diff_{title}")
         fig = plt.figure()
@@ -461,7 +463,7 @@ class EEG_GEN():
         plt.plot(freqs, psd, lw=2)
         plt.title(title)
         plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Power spectral density (V^2 / Hz)')
+        plt.ylabel('Power spectral density (' + r'$\mu$V^2 / Hz)')
         fig = plt.figure()
         return fig
 
@@ -481,7 +483,7 @@ class EEG_GEN():
     def plot_time_series(self, signal, title):
         plt.plot(signal)
         plt.title(title)
-        plt.ylabel("Signal Voltage (microV)")
+        plt.ylabel("Signal Voltage (" + r'($\mu$V)')
         plt.xlabel("Time (s)")
         # plt.ylim(-7, 7)
         plt.savefig(f"Results-Generation/Temporal_{title}")
@@ -495,3 +497,27 @@ class EEG_GEN():
         noise_fr = self.plot_freq_resp(
             noise, self.fs, "Noise Frequency Spectrum")
         plt.show()
+
+    def bar_plot(self, labels, dnf_snr, lms_snr):
+
+        x = np.arange(len(labels))  # the label locations
+        width = 0.35  # the width of the bars
+
+        fig, ax = plt.subplots()
+        rects1 = ax.bar(x - width/2, dnf_snr, width, label='DNF')
+        rects2 = ax.bar(x + width/2, lms_snr, width, label='LMS')
+
+        # Add some text for labels, title and custom x-axis tick labels, etc.
+        ax.set_ylabel('SNR')
+        ax.set_title('SNR of DNF and LMS Improvements')
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels)
+        ax.legend()
+
+        ax.bar_label(rects1, padding=3)
+        ax.bar_label(rects2, padding=3)
+
+        fig.tight_layout()
+        plt.savefig(
+            f"Results-Generation/Bar_Plot_SNRs")
+        return fig

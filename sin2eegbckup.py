@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 dir = "Data/experiment_data"
 res_dir = "deepNeuronalFilter/SubjectData"
-sbjcts = 5
+sbjcts = 3
 data_sbj = 0
 noises_alpha = ["eyescrunching", "jaw",
                 "raisingeyebrows", "movehat", "movehead"]
@@ -46,9 +46,14 @@ def gen_eeg():
         eeg_obj.load_delta_data(
             dir, str(data_sbj), str(sbj), noises_delta[sbj])
         noise_alpha = eeg_obj.get_noise(str(sbj), noises_alpha[sbj])
+        # noise_alpha *= 100
+        # noise_alpha = noise_alpha/eeg_obj.pre_amp*eeg_obj.corrfactor
         noise_delta = eeg_obj.get_noise(str(sbj), noises_delta[sbj])
+        # noise_delta *= 100
+        # noise_delta = noise_delta/eeg_obj.pre_amp*eeg_obj.corrfactor
         eeg_obj.set_noise(str(sbj), noises_alpha[sbj], noise_alpha)
-        A_alpha = 0.1
+        eeg_obj.set_noise(str(sbj), noises_delta[sbj], noise_delta)
+        A_alpha = 0.1  # Volts
         f_alpha = 10
         sum_sines_alpha = False
         optimal_alpha = False
@@ -92,6 +97,8 @@ def gen_eeg():
         DELTA_GAIN = eeg_obj.gen_gain(eeg_delta)
         print(DELTA_GAIN)
         print(NOISE_GAIN_DELTA)
+        print(ALPHA_GAIN)
+        print(NOISE_GAIN_ALPHA)
         snr_fct = 1
         calc = 1
         pure_alpha_SNR = 10*np.log10(eeg_obj.calc_SNR(
@@ -158,6 +165,8 @@ def get_results(signal):
     eeg_obj = EEG_GEN()
     results_df = pd.read_excel(f"results_{signal}.xlsx", "DNF Results")
     init_df = pd.read_excel(r"initial_params.xlsx", signal)
+    dnf_snrs = []
+    lms_snrs = []
     for sbj in range(sbjcts):
         params_sbj = init_df.loc[init_df['Subject Number'] == sbj]
         dnf_data = np.loadtxt(
@@ -202,19 +211,23 @@ def get_results(signal):
         SNR_ORIG = params_sbj["Pure SNR"].values
         SNR_DNF = 10*np.log10(eeg_obj.calc_SNR(
             inner_pure, dnf_noisy, sig_type, snr_fct, calc))
+        diff_dnf = SNR_DNF - SNR_ORIG[0]
+        dnf_snrs.append(diff_dnf)
         SNR_LMS = 10*np.log10(eeg_obj.calc_SNR(
             inner_pure, lms_noisy, sig_type, snr_fct, calc))
+        diff_lms = SNR_LMS - SNR_ORIG[0]
+        lms_snrs.append(diff_lms)
         print(f"{signal} Results: ")
         print(SNR_ORIG)
         print(SNR_DNF)
         print(SNR_LMS)
         eeg_obj.plot_time_series(inner_pure[1000:2000],
                                  f"Pure {signal} Temporal Subject {sbj}, Noise: {params_sbj['Noise'].values}")
-        eeg_obj.plot_time_series(inner_noisy[1000:2000],
+        eeg_obj.plot_time_series(inner_noisy,
                                  f"Noisy {signal} Temporal Subject {sbj}, Noise: {params_sbj['Noise'].values}")
-        eeg_obj.plot_time_series(dnf_noisy[1000:2000],
+        eeg_obj.plot_time_series(dnf_noisy,
                                  f"DNF {signal} Temporal Subject {sbj}, Noise: {params_sbj['Noise'].values}")
-        eeg_obj.plot_time_series(lms_noisy[1000:2000],
+        eeg_obj.plot_time_series(lms_noisy,
                                  f"LMS {signal} Temporal Subject {sbj}, Noise: {params_sbj['Noise'].values}")
         eeg_obj.plot_time_series(outer_noisy,
                                  f"Noise Temporal Subject {sbj}, Noise: {params_sbj['Noise'].values}")
@@ -235,7 +248,6 @@ def get_results(signal):
                                title=f"LMS {signal} Frequency Subject {sbj}, Noise: {params_sbj['Noise'].values}")
         eeg_obj.plot_freq_resp(remover_noisy, Fs=eeg_obj.fs,
                                title=f"Remover {signal} Frequency Subject {sbj}, Noise: {params_sbj['Noise'].values}")
-
         plt.show()
         params = np.append(
             params, params_sbj["Amplitude Sig"])
@@ -260,6 +272,15 @@ def get_results(signal):
         results_df.to_excel(writer, "DNF Results", index=False)
         writer.save()
         writer.close()
+    if(signal == "Alpha"):
+        labels = noises_alpha
+    elif(signal == "Delta"):
+        labels = noises_delta
+    labels = labels[:sbjcts]
+    dnf_snrs = dnf_snrs[:sbjcts]
+    lms_snrs = lms_snrs[:sbjcts]
+    bar_plt = eeg_obj.bar_plot(labels, dnf_snrs, lms_snrs)
+    plt.show()
 
 
 # gen_eeg()
