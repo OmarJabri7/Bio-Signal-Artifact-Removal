@@ -128,7 +128,7 @@ int main(int argc, const char *argv[])
     const float outerGain[] = {20.0, 20.0, 20.0, 20.0, 20.0};
     const float innerGain[] = {1.0, 1.0, 1.0, 1.0, 1.0};
     const float removerGain[] = {2.5, 2.5, 2.5, 2.5, 2.5};
-    const float fnnGain[] = {1, 1, 1, 1, 1};
+    const float fnnGain[] = {1.0, 1.0, 1.0, 1.0, 1.0};
     const float w[] = {0.5, 0.5, 0.5, 0.5, 0.5};
     const float b[] = {0, 0, 0, 0, 0};
     // }
@@ -264,10 +264,10 @@ int main(int argc, const char *argv[])
             NNN->snapWeights("cppData", "Noisy", SUBJECT);
 
             // corrLMSPure += lmsFilterPure->filter(outerDataPure);
-            corrLMSNoisy += lmsFilterNoisy->filter(outerDataNoisy);
+            corrLMSNoisy += lmsFilterNoisy->filter(outerDataNoisy / outerGain[s]);
 
             // lmsOutputPure = innerPure - corrLMSPure;
-            lmsOutputNoisy = innerNoisy - corrLMSNoisy;
+            lmsOutputNoisy = innerDataNoisy / innerGain[s] - corrLMSNoisy;
 
             // lmsFilterPure->lms_update(lmsOutputPure);
             lmsFilterNoisy->lms_update(lmsOutputNoisy);

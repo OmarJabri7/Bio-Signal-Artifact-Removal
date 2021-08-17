@@ -289,13 +289,12 @@ class EEG_GEN():
             2 * np.pi * opt_res["omega"] * self.t + opt_res["phase"]) + opt_res["offset"]
 
     def gen_gain(self, signal) -> float:
-        signal = signal[0]
         signal = np.abs(signal)
         str_signal = str(signal)
         str_signal = str_signal.split(".")
         digits = str_signal[0]
         n = len(digits)
-        return 1/(10**(n - 1))
+        return 1/(10**(n))
 
     def save_data(self, eeg_data, noise_data, subj, sig_type):
         sig_fake = np.column_stack((eeg_data, noise_data))
@@ -369,7 +368,7 @@ class EEG_GEN():
             clean_fft = np.abs(np.fft.fft(clean)/len(clean))
             clean_fft = (clean_fft[range(int(len(clean)/2))])
             noisy_fft = np.abs(np.fft.fft(noisy)/len(noisy))
-            noisy_fft = noisy_fft[range(int(len(clean)/2))]
+            noisy_fft = noisy_fft[range(int(len(noisy)/2))]
             noisy_pow = (np.sum(noisy_fft[start:end]))
             clean_pow = (np.sum(clean_fft[start:end]))
         elif(snr_fct == 2):
@@ -404,7 +403,7 @@ class EEG_GEN():
         plt.xlabel('Time window')
         plt.figure()
 
-    def plot_freq_resp(self, signal, Fs, title):
+    def plot_freq_resp(self, signal, Fs, title, data_subj):
         fourierTransform = np.fft.fft(signal)/len(signal)
         fourierTransform = fourierTransform[range(int(len(signal)/2))]
         tpCount = len(signal)
@@ -415,12 +414,12 @@ class EEG_GEN():
         plt.title(title)
         # plt.xlim(0, 200)
         plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Amplitude (' + r'$\mu$V)')
-        plt.savefig(f"Results-Generation/Frequency_{title}")
+        plt.ylabel('Amplitude (' + r'$\mu$V/Hz)')
+        plt.savefig(f"Results-Generation/subj{data_subj}/Frequency_{title}")
         fig = plt.figure()
         return fig
 
-    def plot_freq_resp_vs(self, sig_type, signal, target, Fs, title, signal1, signal2):
+    def plot_freq_resp_vs(self, sig_type, signal, target, Fs, title, signal1, signal2, data_subj):
         if(sig_type == 0):
             start = 8
             end = 12
@@ -439,9 +438,9 @@ class EEG_GEN():
         values2 = np.arange(int(tpCount2/2))
         timePeriod2 = tpCount2/Fs
         frequencies2 = values2/timePeriod2
-        idx = (np.where(np.logical_and(frequencies >= start, frequencies <= end + 1)))
+        idx = (np.where(np.logical_and(frequencies >= 0, frequencies <= end)))
         idx2 = (np.where(np.logical_and(
-            frequencies >= start, frequencies <= end + 1)))
+            frequencies >= 0, frequencies <= end)))
         plt.plot(frequencies[idx[0][0]:idx[0]
                  [len(idx[0]) - 1]], abs(fourierTransform[idx[0][0]:idx[0]
                                                           [len(idx[0]) - 1]]))
@@ -449,11 +448,11 @@ class EEG_GEN():
                  [len(idx2[0]) - 1]], abs(fourierTransform2[idx2[0][0]:idx2[0]
                                                             [len(idx2[0]) - 1]]))
         plt.title(title)
-        # plt.xlim(0, 200)
         plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Amplitude (' + r'$\mu$V)')
+        plt.ylabel('Amplitude (' + r'$\mu$V/Hz)')
         plt.legend([f"{signal1}", f"{signal2}"])
-        plt.savefig(f"Results-Generation/Frequency_Diff_{title}")
+        plt.savefig(
+            f"Results-Generation/subj{data_subj}/Frequency_Diff_{title}")
         fig = plt.figure()
         return fig
 
@@ -463,7 +462,7 @@ class EEG_GEN():
         plt.plot(freqs, psd, lw=2)
         plt.title(title)
         plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Power spectral density (' + r'$\mu$V^2 / Hz)')
+        plt.ylabel('Power spectral density (' + r'$\mu$V/Hz)')
         fig = plt.figure()
         return fig
 
@@ -480,13 +479,13 @@ class EEG_GEN():
         fig = plt.figure()
         return fig
 
-    def plot_time_series(self, signal, title):
+    def plot_time_series(self, signal, title, data_subj):
         plt.plot(signal)
         plt.title(title)
-        plt.ylabel("Signal Voltage (" + r'($\mu$V)')
+        plt.ylabel("Signal Voltage " + r'($\mu$V)')
         plt.xlabel("Time (s)")
         # plt.ylim(-7, 7)
-        plt.savefig(f"Results-Generation/Temporal_{title}")
+        plt.savefig(f"Results-Generation/subj{data_subj}/Temporal_{title}")
         fig = plt.figure()
         return fig
 
@@ -498,19 +497,27 @@ class EEG_GEN():
             noise, self.fs, "Noise Frequency Spectrum")
         plt.show()
 
-    def bar_plot(self, labels, dnf_snr, lms_snr):
-
+    def bar_plot(self, labels, dnf_snr, lms_snr, signal, data_subj):
+        print(labels)
         x = np.arange(len(labels))  # the label locations
         width = 0.35  # the width of the bars
-
+        dnf_max = np.max(dnf_snr)
+        dnf_min = np.min(dnf_snr)
+        lms_max = np.max(lms_snr)
+        lms_min = np.min(lms_snr)
+        max_snr = max(dnf_max, lms_max)
+        min_snr = min(dnf_min, lms_min)
         fig, ax = plt.subplots()
-        rects1 = ax.bar(x - width/2, dnf_snr, width, label='DNF')
+        rects1 = ax.bar(x - width/2, dnf_snr,
+                        width, label='DNF')
         rects2 = ax.bar(x + width/2, lms_snr, width, label='LMS')
 
         # Add some text for labels, title and custom x-axis tick labels, etc.
-        ax.set_ylabel('SNR')
+        ax.set_ylabel('SNR Improvements (dB)')
+        ax.set_xlabel('Noise Sources')
         ax.set_title('SNR of DNF and LMS Improvements')
         ax.set_xticks(x)
+        plt.ylim(min_snr - 5, max_snr + 5)
         ax.set_xticklabels(labels)
         ax.legend()
 
@@ -519,5 +526,5 @@ class EEG_GEN():
 
         fig.tight_layout()
         plt.savefig(
-            f"Results-Generation/Bar_Plot_SNRs")
+            f"Results-Generation/subj{data_subj}/Bar_Plot_SNRs_{signal}")
         return fig
