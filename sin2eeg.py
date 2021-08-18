@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 dir = "Data/experiment_data"
 res_dir = "deepNeuronalFilter/SubjectData"
 noises = 5
-data_sbj = 4
+data_sbj = 5
 noises_alpha_combos = ["eyescrunching+jaw", "jaw+raisingeyebrows"]
 noises_delta_combos = ["blink+templerun", "blink+sudoku"]
 noises_alpha = ["eyescrunching", "jaw",
@@ -308,7 +308,7 @@ def get_results(signal):
         labels, dnf_snrs, lms_snrs, laplace_snrs, signal, data_sbj)
 
 
-# gen_eeg()
+gen_eeg()
 with open('deepNeuronalFilter/signal.txt', 'r') as file:
     signal = file.read().replace('\n', '')
-get_results(signal)
+# get_results(signal)
