@@ -4,12 +4,12 @@
 #ifndef EEGFILTER_PARAMETERS_H
 #define EEGFILTER_PARAMETERS_H
 
-#define LMS_COEFF (int)(250)
-#define LMS_LEARNING_RATE 0.00001
+#define LMS_COEFF (int)(310)
+#define LMS_LEARNING_RATE 0.0000001
 
 #define DoShowPlots
 
-#define maxFilterLength 250
+#define maxFilterLength 310
 
 // NOISE:
 #define doOuterPreFilter

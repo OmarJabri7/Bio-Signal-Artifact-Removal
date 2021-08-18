@@ -1,331 +1,314 @@
-
+from eeg_generator import EEG_GEN
 import os
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.signal as sig
-import pandas as pd
-from scipy.signal import butter, lfilter, filtfilt
-from param_search import fit_sin
-from scipy.io import loadmat
-from matplotlib.backends.backend_pdf import PdfPages
-pi = np.pi
-# plt.ion()
 
-# use ggplot style for more sophisticated visuals
-# plt.style.use('ggplot')
-
-
-def live_plotter(x_vec, y1_data, line1, identifier='', pause_time=2):
-    if line1 == []:
-        # this is the call to matplotlib that allows dynamic plotting
-        plt.ion()
-        fig = plt.figure(figsize=(13, 6))
-        ax = fig.add_subplot(111)
-        # create a variable for the line so we can later update it
-        line1, = ax.plot(x_vec, y1_data, '-o', alpha=0.8)
-        # update plot label/title
-        plt.ylabel('Y Label')
-        plt.title('Title: {}'.format(identifier))
-        plt.show()
-
-    # after the figure, axis, and line are created, we only need to update the y-data
-    line1.set_ydata(y1_data)
-    # adjust limits if new data goes beyond bounds
-    if np.min(y1_data) <= line1.axes.get_ylim()[0] or np.max(y1_data) >= line1.axes.get_ylim()[1]:
-        plt.ylim([np.min(y1_data)-np.std(y1_data),
-                 np.max(y1_data)+np.std(y1_data)])
-    # this pauses the data so the figure/axis can catch up - the amount of pause can be altered above
-    plt.pause(pause_time)
-
-    # return line so we can update it again in the next iteration
-    return line1
-
-
-def calc_SNR(noise_var, sig_var):
-    SNR = 10 * np.log10(sig_var / noise_var)
-    return SNR
-
-
-def get_SNR(signal, outer, inner, remover, fnn, f_low, f_high, N, fs=250):
-    timeX = np.linspace(0, N / 250, N)
-    f_cut_start = int((f_low / fs) * N)
-    f_cut_end = int((f_high / fs) * N)
-    freqX = np.linspace(0, fs / 2, int(N / 2))
-    fft_outer = np.abs(np.fft.fft(outer)[
-        0:np.int(N / 2)])
-    fft_inner = np.abs(np.fft.fft(inner)[
-        0:np.int(N / 2)])
-    # fft_fnn = np.abs(np.fft.fft(fnn)[
-    # 0:np.int(N / 2)])
-    # df_inner = pd.DataFrame({"x": freqX, "y": fft_inner})
-    # # df_fnn = pd.DataFrame({"x": freqX, "y": fft_fnn})
-    sin_start = int((f_low / fs) * N)
-    sin_end = int((f_high / fs) * N)
-    diff_noise = sin_end - sin_start
-    noise = np.sum(
-        fft_outer[sin_start:sin_end]) / diff_noise
-    signal_integral = np.sum(
-        fft_inner) / diff_noise
-    signal = signal_integral - noise
-    snr = signal / noise
-    return np.sum(snr)
-
-
-def butter_bandpass(signal, lowcut, highcut, fs, order=5):
-    nyq = 0.5 * fs
-    low = lowcut / nyq
-    high = highcut / nyq
-    b, a = butter(order, [low, high], btype='band')
-    y = lfilter(b, a, signal)
-    return y
-
-
-def butter_lowpass(signal, cutoff, fs, order=5):
-    nyq = 0.5*fs
-    normal_cutoff = cutoff/nyq
-    b, a = butter(order, normal_cutoff, btype='high', analog=False)
-    y = filtfilt(b, a, signal)
-    return y
-
-
-def end(x): return len(x) - 1
-
-
-def to_polar(complex_ar):
-    return np.abs(complex_ar), np.angle(complex_ar)
-
-
-def signaltonoise(a, axis=0, ddof=0):
-    a = np.asanyarray(a)
-    m = a.mean(axis)
-    sd = a.std(axis=axis, ddof=ddof)
-    return 20*np.log10(abs(np.where(sd == 0, 0, m/sd)))
-
-
-def plot_freq_resp(signal, Fs, title):
-    fourierTransform = np.fft.fft(signal)/len(signal)
-    fourierTransform = fourierTransform[range(int(len(signal)/2))]
-    tpCount = len(signal)
-    values = np.arange(int(tpCount/2))
-    timePeriod = tpCount/Fs
-    frequencies = values/timePeriod
-    plt.plot(frequencies, abs(fourierTransform))
-    plt.title(title)
-    plt.xlabel('Frequency (Hz)')
-    plt.ylabel('Power spectral density (V^2 / Hz)')
-    plt.savefig(f"Results-Generation/Frequency_{title}")
-    fig = plt.figure()
-    return fig
-
-
-def plot_welch(signal, Fs, title):
-    win = Fs
-    freqs, psd = sig.welch(signal, Fs, nperseg=win)
-    plt.plot(freqs, psd, color='k', lw=2)
-    plt.title(title)
-    plt.xlabel('Frequency (Hz)')
-    plt.ylabel('Power spectral density (V^2 / Hz)')
-    fig = plt.figure()
-    return fig
-
-
-def plot_time_series(signal, title):
-    plt.plot(signal)
-    plt.title(title)
-    plt.ylabel("Signal Voltage (V)")
-    plt.xlabel("Time (s)")
-    plt.savefig(f"Results-Generation/Temporal_{title}")
-    fig = plt.figure()
-    return fig
-
-
-def filter_banks(signal, fs, nfilt, NFFT):
-    pre_emphasis = 0.97
-    emphasized_signal = np.append(
-        signal[0], signal[1:] - pre_emphasis * signal[:-1])
-    frame_stride = 0.01
-    frame_size = 0.025
-    frame_length, frame_step = frame_size * fs, frame_stride * \
-        fs  # Convert from seconds to samples
-    signal_length = len(emphasized_signal)
-    frame_length = int(round(frame_length))
-    frame_step = int(round(frame_step))
-    # Make sure that we have at least 1 frame
-    num_frames = int(np.ceil(
-        float(np.abs(signal_length - frame_length)) / frame_step))
-
-    pad_signal_length = num_frames * frame_step + frame_length
-    z = np.zeros((pad_signal_length - signal_length))
-    # Pad Signal to make sure that all frames have equal number of samples without truncating any samples from the original signal
-    pad_signal = np.append(emphasized_signal, z)
-
-    indices = np.tile(np.arange(0, frame_length), (num_frames, 1)) + np.tile(
-        np.arange(0, num_frames * frame_step, frame_step), (frame_length, 1)).T
-    frames = pad_signal[indices.astype(np.int32, copy=False)]
-    frames *= np.hamming(frame_length)
-    mag_frames = np.absolute(np.fft.rfft(
-        frames, NFFT))  # Magnitude of the FFT
-    pow_frames = ((1.0 / NFFT) * ((mag_frames) ** 2))  # Power Spectrum
-    low_freq_mel = 0
-    high_freq_mel = (2595 * np.log10(1 + (fs / 2) / 700))
-    # Equally spaced in Mel scale
-    mel_points = np.linspace(low_freq_mel, high_freq_mel, nfilt + 2)
-    hz_points = (700 * (10**(mel_points / 2595) - 1))  # Convert Mel to Hz
-    bin = np.floor((NFFT + 1) * hz_points / fs)
-    fbank = np.zeros((nfilt, int(np.floor(NFFT / 2 + 1))))
-    for m in range(1, nfilt + 1):
-        f_m_minus = int(bin[m - 1])   # left
-        f_m = int(bin[m])             # center
-        f_m_plus = int(bin[m + 1])    # right
-
-        for k in range(f_m_minus, f_m):
-            fbank[m - 1, k] = (k - bin[m - 1]) / (bin[m] - bin[m - 1])
-        for k in range(f_m, f_m_plus):
-            fbank[m - 1, k] = (bin[m + 1] - k) / (bin[m + 1] - bin[m])
-    filter_banks = np.dot(pow_frames, fbank.T)
-    filter_banks = np.where(filter_banks == 0, np.finfo(
-        float).eps, filter_banks)  # Numerical Stability
-    filter_banks = 20 * np.log10(filter_banks)  # dB
-    return filter_banks
-
-
-def multipage(filename, figs=None, dpi=200):
-    pp = PdfPages(filename)
-    if figs is None:
-        figs = [plt.figure(n) for n in plt.get_fignums()]
-    for fig in figs:
-        fig.savefig(pp, format='pdf')
-    pp.close()
+dir = "Data/experiment_data"
+res_dir = "deepNeuronalFilter/SubjectData"
+noises = 5
+data_sbj = 4
+noises_alpha_combos = ["eyescrunching+jaw", "jaw+raisingeyebrows"]
+noises_delta_combos = ["blink+templerun", "blink+sudoku"]
+noises_alpha = ["eyescrunching", "jaw",
+                "raisingeyebrows", "movehat", "movehead"]
+noises_delta = ["blink", "templerun", "sudoku", "flow", "wordsearch"]
+DELTA_LOW = 1
+DELTA_HIGH = 6
+ALPHA_LOW = 8
+ALPHA_HIGH = 14
 # ******************** Main ********************
+# %%
 
 
-# %%
-print("Show Plots: (y|n)")
-show_plots = input().lower()
-print("Save signals: (y|n)")
-save_sigs = input().lower()
-print("Update Csv: (y|n)")
-updt_csv = input().lower()
-sbjcts = 1
-sudoku_dat = np.loadtxt('Data/subj27/sudoku.dat')
-blink_dat = np.loadtxt('Data/subj27/blink.dat')
-relax_dat = np.loadtxt('Data/subj27/sit_relax.dat')
-ts = blink_dat[:, 0]
-noise_fs = 1/(ts[1] - ts[0])
-print(noise_fs)
-Fs = 1000.0
-f = 10
-N = min(sudoku_dat.shape[0], blink_dat.shape[0], relax_dat.shape[0])
-x = np.arange(N)
-A = 0.1
-y = A*np.sin(2 * np.pi * f * x / Fs)
-y = y[:N]
-# Add noise based on desired SNR
-sudoku_noise = sudoku_dat[:N, 1]
-sudoku_noise_2 = sudoku_dat[:N, 2]
-blink_noise = blink_dat[:N, 1]
-blink_noise_2 = blink_dat[:N, 2]
-relax_noise = relax_dat[:N, 1]
-relax_noise_2 = relax_dat[:N, 2]
-noise = [blink_noise_2, blink_noise_2, sudoku_noise_2]
-# Setup SNR parameters for integral calculations
-Py = 1/N*(np.sum(y**2))
-if(not os.path.exists("results.xlsx")):
-    data_frame = pd.DataFrame(
-        columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta",  "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF", "Subject Number"])
-    data_frame.to_excel(r"results.xlsx", sheet_name="DNF results", index=False)
-results_df = pd.read_excel(r"results.xlsx", "DNF results")
-sine_low = 1
-sine_high = 100
-sine_start = int((sine_low / Fs) * N)
-sine_end = int((sine_high / Fs) * N)
-diff_noise = sine_end - sine_start
-freqX = np.linspace(0, Fs / 2, int(N / 2))
-# %%
-for sbj in range(sbjcts):
-    print(f"Subject {sbj}: ")
-    gain_eeg = 0.1
-    gain_noise = 1.0
-    y *= gain_eeg
-    y_fft = np.abs(np.fft.fft(y)[
-        0: np.int(N / 2)])
-    y_integral = np.sum(y[sine_low:sine_high]) / diff_noise
-    noise[sbj] *= gain_noise
-    fake_eeg = y + noise[sbj]
-    fake_eeg = butter_bandpass(fake_eeg, 1, 100, Fs, 2)
-    # fake_eeg = fake_eeg - np.mean(fake_eeg, axis=-1)
-    fake_eeg_fft = np.abs(np.fft.fft(fake_eeg)[
-        0: np.int(N / 2)])
-    noise_fft = np.abs(np.fft.fft(noise[sbj])[
-        0: np.int(N / 2)])
-    noise_integral = np.sum(noise_fft[sine_low:sine_high]) / diff_noise
-    noisy_integral = np.sum(fake_eeg_fft[sine_low:sine_high]) / diff_noise
-    # fake_eeg *= gain_eeg
-    # noise[sbj] *= gain_noise
-    Ps = 1/N * (np.sum(fake_eeg**2))
-    Pn = 1/N * (np.sum(noise[sbj]**2))
-    SNR = 10 * np.log10((Ps)/(Pn))
-    print(f"SNR Before: {SNR}")
-    zeros = np.zeros(len(fake_eeg))
-    sig_fake = np.column_stack((fake_eeg, noise[sbj]))
-    signal_df = pd.DataFrame(sig_fake)
-    if(save_sigs == "y"):
-        signal_df.to_csv(
-            f"deepNeuronalFilter/SubjectData/EEG_Subject{sbj}.tsv", index=True, header=False, sep="\t")
-        print("Signals Saved!")
-    dnf_res = np.loadtxt(
-        f"deepNeuronalFilter/cppData/subject{sbj}/fnn_subject{sbj}.tsv")
-    lms_res = np.loadtxt(
-        f"deepNeuronalFilter/cppData/subject{sbj}/lmsOutput_subject{sbj}.tsv")
-    remover_res = np.loadtxt(
-        f"deepNeuronalFilter/cppData/subject{sbj}/remover_subject{sbj}.tsv")
-    parameters_res = np.loadtxt(
-        f"deepNeuronalFilter/cppData/subject{sbj}/cppParams_subject{sbj}.tsv")
-    init = 0
-    dnf_res = dnf_res[init:N + init]
-    # dnf_res *= gain_eeg
-    dnf_fft = np.abs(np.fft.fft(dnf_res)[
-        0:np.int(N / 2)])
-    dnf_integral = np.sum(dnf_fft[sine_low:sine_high])/diff_noise
-    Pr = 1/N*(np.sum(dnf_res**2))
-    Prem = 1/N*(np.sum(remover_res**2))
-    Plms = 1/N*(np.sum(lms_res**2))
-    print(dnf_integral)
-    print(noise_integral)
-    SNR_DNF = 10*np.log10((Pr)/(Pn))
-    SNR_REM = 10*np.log10((Prem)/Pn)
-    SNR_LMS = 10*np.log10((Plms) / (Pn))
-    print(f"SNR After: {SNR_DNF}")
-    parameters_res = np.append(parameters_res, gain_eeg)
-    parameters_res = np.append(parameters_res, gain_noise)
-    parameters_res = np.append(parameters_res, SNR)
-    parameters_res = np.append(parameters_res, SNR_DNF)
-    parameters_res = np.append(parameters_res, sbj)
-    results_df = results_df.append(pd.DataFrame(
-        [parameters_res], columns=results_df.columns), ignore_index=True)
-    if(updt_csv == "y"):
-        results_df.to_excel("results.xlsx", "DNF results", index=False)
-    if(show_plots == "y"):
-        plot_time_series(fake_eeg,
-                         f"Original Temporal Subject {sbj}")
-        plot_time_series(noise[sbj],
-                         f"Original Temporal Subject {sbj}")
-        plot_time_series(dnf_res, f"DNF Temporal Subject {sbj}")
-        plot_time_series(remover_res,
-                         f"Remover Temporal Subject {sbj}")
-        plot_time_series(lms_res, f"LMS Temporal Subject {sbj}")
-        # fr1 = plot_freq_resp(
-        #     fake_eeg, Fs, f"Fake EEG Frequency Subject {sbj}")
-        # fr2 = plot_freq_resp(
-        #     dnf_res, Fs, f"DNF Frequency Subject {sbj}")
-        # fr3 = plot_freq_resp(
-        #     remover_res, Fs, f"Remover Frequency Subject {sbj}")
-        fr4 = plot_freq_resp(lms_res, Fs, f"LMS Frequency Subject {sbj}")
-        plt.magnitude_spectrum(fake_eeg, Fs=Fs)
-        plt.figure()
-        plt.magnitude_spectrum(dnf_res, Fs=Fs)
-        plt.figure()
-        plt.magnitude_spectrum(remover_res, Fs=Fs)
-        plt.show()
-if(show_plots == "y"):
-    multipage(f"Plots.pdf")
+def gen_eeg():
+    eeg_obj = EEG_GEN()
+    alpha = range(ALPHA_LOW, ALPHA_HIGH)
+    delta = range(DELTA_LOW, DELTA_HIGH)
+    if(not os.path.exists("Results-Generation/subj{data_sbj}/results_Alpha.xlsx") and not os.path.exists("Results-Generation/subj{data_sbj}/results_Delta.xlsx")):
+        data_frame_alpha = pd.DataFrame(
+            columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta", "Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids",  "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF", "SNR LMS", "Subject Number", "Noise"])
+        data_frame_delta = pd.DataFrame(
+            columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta", "Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids", "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF", "SNR LMS", "Subject Number", "Noise"])
+        eeg_obj.save_xls([data_frame_alpha],
+                         f"Results-Generation/subj{data_sbj}/results_Alpha.xlsx", ["DNF Results"])
+        eeg_obj.save_xls([data_frame_delta],
+                         f"Results-Generation/subj{data_sbj}/results_Delta.xlsx", ["DNF Results"])
+    params_df_alpha = pd.DataFrame(
+        columns=["Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids", "Noise Gain", "Signal Gain", "Pure SNR",  "Subject Number", "Noise"])
+    params_df_delta = pd.DataFrame(
+        columns=["Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids", "Noise Gain", "Signal Gain", "Pure SNR",  "Subject Number", "Noise"])
+    eeg_obj.save_xls([params_df_alpha, params_df_delta],
+                     "initial_params.xlsx", ["Alpha", "Delta"])
+    for sbj in range(noises):
+        params_alpha = []
+        params_delta = []
+        eeg_obj.load_alpha_data(
+            dir, str(data_sbj), str(sbj), noises_alpha[sbj])
+        eeg_obj.load_delta_data(
+            dir, str(data_sbj), str(sbj), noises_delta[sbj])
+        noise_alpha = eeg_obj.get_noise(str(sbj), noises_alpha[sbj])
+        noise_alpha = noise_alpha*1e2
+        noise_delta = eeg_obj.get_noise(str(sbj), noises_delta[sbj])
+        noise_delta = noise_delta*1e2
+        eeg_obj.set_noise(str(sbj), noises_alpha[sbj], noise_alpha)
+        eeg_obj.set_noise(str(sbj), noises_delta[sbj], noise_delta)
+        A_alpha = 15  # micro Volts
+        f_alpha = 10  # Hz
+        sum_sines_alpha = False
+        optimal_alpha = False
+        bandpass_alpha = False
+        eeg_obj.gen_sine_alpha(A=A_alpha, f=f_alpha, freqs=alpha,
+                               fs=eeg_obj.fs, bandpass=bandpass_alpha, sum_sines=sum_sines_alpha, optimal=optimal_alpha)
+        pure_eeg_alpha = eeg_obj.get_pure_alpha()
+        A_delta = 15  # micro Volts
+        f_delta = 3  # Hz
+        sum_sines_delta = False
+        optimal_delta = False
+        bandpass_delta = False
+        eeg_obj.gen_sine_delta(A=A_delta, f=f_delta, freqs=delta,
+                               fs=eeg_obj.fs, bandpass=bandpass_delta, sum_sines=sum_sines_delta, optimal=optimal_delta)
+        pure_eeg_delta = eeg_obj.get_pure_delta()
+        eeg_obj.gen_eeg_alpha(str(sbj), noises_alpha[sbj])
+        eeg_obj.gen_eeg_delta(str(sbj), noises_delta[sbj])
+        eeg_alpha = eeg_obj.get_eeg_alpha(str(sbj), noises_alpha[sbj])
+        eeg_alpha = eeg_obj.butter_highpass(eeg_alpha, 1, eeg_obj.fs, 4)
+        eeg_alpha = eeg_obj.butter_bandstop(
+            eeg_alpha, 49, 51, eeg_obj.fs, 2)
+        eeg_obj.plot_freq_resp(eeg_alpha, eeg_obj.fs,
+                               f"Before LowPass Noisy Alpha Frequency Subject {data_sbj}", data_sbj)
+        eeg_alpha = eeg_obj.butter_lowpass(
+            eeg_alpha, 100, eeg_obj.fs, 2)
+        eeg_delta = eeg_obj.get_eeg_delta(str(sbj), noises_delta[sbj])
+        eeg_delta = eeg_obj.butter_highpass(eeg_delta, 1, eeg_obj.fs, 4)
+        eeg_delta = eeg_obj.butter_bandstop(
+            eeg_delta, 49, 51, eeg_obj.fs, 2)
+        eeg_obj.plot_freq_resp(eeg_delta, eeg_obj.fs,
+                               f"Before LowPass Noisy Delta Frequency Subject {data_sbj}", data_sbj)
+        eeg_delta = eeg_obj.butter_lowpass(
+            eeg_delta, 100, eeg_obj.fs, 2)
+        eeg_obj.plot_freq_resp(eeg_alpha, eeg_obj.fs,
+                               f"After LowPass Noisy Alpha Frequency Subject {data_sbj}", data_sbj)
+        eeg_obj.plot_freq_resp(eeg_delta, eeg_obj.fs,
+                               f"After LowPass Noisy Delta Frequency Subject {data_sbj}", data_sbj)
+        ALPHA_GAIN = eeg_obj.gen_gain(np.max(eeg_alpha))
+        NOISE_GAIN_ALPHA = eeg_obj.gen_gain(np.max(noise_alpha))
+        NOISE_GAIN_DELTA = eeg_obj.gen_gain(np.max(noise_delta))
+        DELTA_GAIN = eeg_obj.gen_gain(np.max(eeg_delta))
+        snr_fct = 1
+        calc = 1
+        pure_alpha_SNR = 10*np.log10(eeg_obj.calc_SNR(
+            pure_eeg_alpha, eeg_alpha, 0, snr_fct, calc))
+        pure_delta_SNR = 10*np.log10(eeg_obj.calc_SNR(
+            pure_eeg_delta, eeg_delta, 1, snr_fct, calc))
+        eeg_obj.plot_time_series(pure_eeg_alpha[1000:2000],
+                                 f"Pure Alpha Temporal Subject {data_sbj}", data_sbj)
+        eeg_obj.plot_freq_resp(pure_eeg_alpha, eeg_obj.fs,
+                               f"Pure Alpha Frequency Subject {data_sbj}", data_sbj)
+        eeg_obj.plot_time_series(pure_eeg_delta[1000:2000],
+                                 f"Pure Delta Temporal Subject {data_sbj}", data_sbj)
+        eeg_obj.plot_freq_resp(pure_eeg_delta, eeg_obj.fs,
+                               f"Pure Delta Frequency Subject {data_sbj}", data_sbj)
+        eeg_obj.plot_time_series(eeg_alpha[1000:2000],
+                                 f"Noisy Alpha Temporal Subject {data_sbj}, Noise: {noises_alpha[sbj]}", data_sbj)
+        eeg_obj.plot_time_series(eeg_delta[1000:2000],
+                                 f"Noisy Delta Temporal Subject {data_sbj}, Noise: {noises_delta[sbj]}", data_sbj)
+        eeg_obj.plot_time_series(noise_alpha,
+                                 f"Noise Alpha Temporal Subject {data_sbj}, Noise: {noises_alpha[sbj]}", data_sbj)
+        eeg_obj.plot_time_series(noise_delta,
+                                 f"Noise Delta Temporal Subject {data_sbj}, Noise: {noises_delta[sbj]}", data_sbj)
+        eeg_obj.plot_freq_resp(eeg_alpha, eeg_obj.fs,
+                               f"Noisy Alpha Frequency Subject {data_sbj}, Noise: {noises_alpha[sbj]}", data_sbj)
+        eeg_obj.plot_freq_resp(eeg_delta, eeg_obj.fs,
+                               f"Noisy Delta Frequency Subject {data_sbj}, Noise: {noises_delta[sbj]}", data_sbj)
+        eeg_obj.plot_freq_resp(noise_alpha, eeg_obj.fs,
+                               f"Noise Alpha Frequency Subject {data_sbj}, Noise: {noises_alpha[sbj]}", data_sbj)
+        eeg_obj.plot_freq_resp(noise_delta, eeg_obj.fs,
+                               f"Noise Delta Frequency Subject {data_sbj}, Noise: {noises_delta[sbj]}", data_sbj)
+        eeg_obj.plot_freq_resp_vs(0, pure_eeg_alpha, eeg_alpha, eeg_obj.fs,
+                                  f"Pure vs Noisy Alphas Frequency Subject {data_sbj}, Noise: {noises_alpha[sbj]}", "Pure Alpha", "Noisy Alpha", data_sbj)
+        eeg_obj.plot_freq_resp_vs(1, pure_eeg_delta, eeg_delta, eeg_obj.fs,
+                                  f"Pure vs Noisy Deltas Frequency Subject {data_sbj}, Noise: {noises_delta[sbj]}", "Pure Delta", "Noisy Delta", data_sbj)
+        # plt.show()
+        noise_delta *= NOISE_GAIN_DELTA
+        noise_alpha *= NOISE_GAIN_ALPHA
+        eeg_alpha *= ALPHA_GAIN
+        eeg_delta *= DELTA_GAIN
+        print(
+            f"Pure Alpha: {pure_alpha_SNR} dB")
+        print(
+            f"Pure Delta: {pure_delta_SNR} dB")
+        eeg_obj.save_data(pure_eeg_alpha, noise_alpha, str(sbj), "Alpha/Pure")
+        eeg_obj.save_data(eeg_alpha, noise_alpha, str(sbj), "Alpha/Noisy")
+        eeg_obj.save_data(pure_eeg_delta, noise_delta, str(sbj), "Delta/Pure")
+        eeg_obj.save_data(eeg_delta, noise_delta, str(sbj), "Delta/Noisy")
+        params_alpha.append([A_alpha, f_alpha, sum_sines_alpha, bandpass_alpha,
+                            optimal_alpha, NOISE_GAIN_ALPHA, ALPHA_GAIN, pure_alpha_SNR, sbj, noises_alpha[sbj]])
+        params_delta.append([A_delta, f_delta, sum_sines_delta, bandpass_delta,
+                            optimal_delta, NOISE_GAIN_DELTA, DELTA_GAIN, pure_delta_SNR, sbj, noises_delta[sbj]])
+        params_df_alpha = params_df_alpha.append(pd.DataFrame(
+            [params_alpha[0]], columns=params_df_alpha.columns), ignore_index=True)
+        params_df_delta = params_df_delta.append(pd.DataFrame(
+            [params_delta[0]], columns=params_df_delta.columns), ignore_index=True)
+        writer = pd.ExcelWriter("initial_params.xlsx", engine='xlsxwriter')
+        params_df_alpha.to_excel(writer, "Alpha", index=False)
+        params_df_delta.to_excel(writer, "Delta", index=False)
+        writer.save()
+        writer.close()
+
+
+def get_results(signal):
+    eeg_obj = EEG_GEN()
+    results_df = pd.read_excel(
+        f"Results-Generation/subj{data_sbj}/results_{signal}.xlsx", "DNF Results")
+    init_df = pd.read_excel(r"initial_params.xlsx", signal)
+    dnf_snrs = []
+    lms_snrs = []
+    laplace_snrs = []
+    impulse = 0
+    for sbj in range(noises):
+        params_sbj = init_df.loc[init_df['Subject Number'] == sbj]
+        dnf_data = np.loadtxt(
+            f"deepNeuronalFilter/cppData/subject{sbj}/fnn_subject_{signal}{sbj}.tsv")
+        NOISE_GAIN = params_sbj["Noise Gain"].values
+        SIG_GAIN = params_sbj["Signal Gain"].values
+        dnf_pure = dnf_data[:, 0]
+        dnf_noisy = dnf_data[:, 1]
+        dnf_noisy = dnf_noisy[impulse:]
+        dnf_noisy /= SIG_GAIN
+        lms_data = np.loadtxt(
+            f"deepNeuronalFilter/cppData/subject{sbj}/lmsOutput_subject_{signal}{sbj}.tsv")
+        laplace_data = np.loadtxt(
+            f"deepNeuronalFilter/cppData/subject{sbj}/laplace_subject_{signal}{sbj}.tsv")
+        lms_pure = lms_data[:, 0]
+        lms_noisy = lms_data[:, 1]
+        laplace_noisy = laplace_data[:, 1]
+        laplace_noisy /= SIG_GAIN
+        lms_noisy = lms_noisy[impulse:]
+        lms_noisy /= SIG_GAIN
+        remover_data = np.loadtxt(
+            f"deepNeuronalFilter/cppData/subject{sbj}/remover_subject_{signal}{sbj}.tsv")
+        remover_pure = remover_data[:, 0]
+        remover_noisy = remover_data[:, 1]
+        pure_sig = np.loadtxt(
+            f"deepNeuronalFilter/SubjectData/{signal}/Pure/EEG_Subject{sbj}.tsv")
+        noisy_sig = np.loadtxt(
+            f"deepNeuronalFilter/SubjectData/{signal}/Noisy/EEG_Subject{sbj}.tsv")
+        inner_pure = pure_sig[:, 1]
+        outer_pure = pure_sig[:, 2]
+        inner_noisy = noisy_sig[:, 1]
+        inner_noisy /= SIG_GAIN
+        outer_noisy = noisy_sig[:, 2]
+        inner_pure = inner_pure[impulse:]
+        parameters = np.loadtxt(
+            f"deepNeuronalFilter/cppData/subject{sbj}/cppParams_subject_{signal}{sbj}.tsv")
+        errors = np.loadtxt(
+            f"deepNeuronalFilter/cppData/subject{sbj}/error_subject_{signal}{sbj}.tsv")
+        dnf_error = errors[:, 0]
+        lms_error = errors[:, 1]
+        laplace_error = errors[:, 2]
+        params = parameters[:]
+        dnf_noisy = eeg_obj.butter_highpass(dnf_noisy, 1, eeg_obj.fs, 4)
+        dnf_pure = eeg_obj.butter_highpass(dnf_pure, 1, eeg_obj.fs, 4)
+        snr_fct = 1
+        calc = 0
+        if("Alpha" in signal):
+            sig_type = 0
+        elif("Delta" in signal):
+            sig_type = 1
+        else:
+            print("Please enter the correct signal names!")
+            exit(0)
+        SNR_ORIG = params_sbj["Pure SNR"].values
+        SNR_DNF = 10*np.log10(eeg_obj.calc_SNR(
+            inner_pure, dnf_noisy, sig_type, snr_fct, calc))
+        diff_dnf = SNR_DNF - SNR_ORIG[0]
+        dnf_snrs.append(diff_dnf)
+        SNR_LMS = 10*np.log10(eeg_obj.calc_SNR(
+            inner_pure, lms_noisy, sig_type, snr_fct, calc))
+        diff_lms = SNR_LMS - SNR_ORIG[0]
+        lms_snrs.append(diff_lms)
+        SNR_LAPLACE = 10*np.log10(eeg_obj.calc_SNR(
+            inner_pure, laplace_noisy, sig_type, snr_fct, calc))
+        diff_laplace = SNR_LAPLACE - SNR_ORIG[0]
+        laplace_snrs.append(diff_laplace)
+        print(f"{signal} Results: ")
+        print(SNR_ORIG)
+        print(SNR_DNF)
+        print(SNR_LMS)
+        print(SNR_LAPLACE)
+        eeg_obj.plot_time_series(inner_pure[5000:6000],
+                                 f"Pure {signal} Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_sbj)
+        eeg_obj.plot_time_series(inner_noisy[5000:6000],
+                                 f"Noisy {signal} Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_sbj)
+        eeg_obj.plot_time_series(dnf_noisy[5000:6000],
+                                 f"DNF {signal} Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_sbj)
+        eeg_obj.plot_time_series(lms_noisy[5000:6000],
+                                 f"LMS {signal} Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_sbj)
+        eeg_obj.plot_time_series(outer_noisy,
+                                 f"Noise Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_sbj)
+        eeg_obj.plot_time_series(remover_noisy,
+                                 f"Remover {signal} Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_sbj)
+
+        eeg_obj.plot_freq_resp(inner_noisy, Fs=eeg_obj.fs,
+                               title=f"Noisy {signal} Frequency Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_subj=data_sbj)
+        eeg_obj.plot_freq_resp_vs(sig_type,
+                                  inner_noisy, dnf_noisy, eeg_obj.fs, f"Noisy vs Denoised {signal} Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", "Noisy {signal}", "Denoised {signal}", data_sbj)
+        eeg_obj.plot_freq_resp_vs(sig_type,
+                                  inner_pure, dnf_noisy, eeg_obj.fs, f"Pure vs Denoised {signal} Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", "Pure {signal}", "Denoised {signal}", data_sbj)
+        eeg_obj.plot_freq_resp_vs(sig_type,
+                                  inner_noisy, lms_noisy, eeg_obj.fs, f"Noisy vs Denoised {signal} LMS Subject {data_sbj}", "Noisy {signal}", "Denoised {signal}", data_sbj)
+        eeg_obj.plot_freq_resp(outer_noisy, Fs=eeg_obj.fs,
+                               title=f"Noise Frequency Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_subj=data_sbj)
+        eeg_obj.plot_freq_resp(lms_noisy, Fs=eeg_obj.fs,
+                               title=f"LMS {signal} Frequency Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_subj=data_sbj)
+        eeg_obj.plot_freq_resp(remover_noisy, Fs=eeg_obj.fs,
+                               title=f"Remover {signal} Frequency Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_subj=data_sbj)
+        eeg_obj.plot_time_series(dnf_error[5000:6000],
+                                 f"Error rates {signal} Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_sbj, False)
+        eeg_obj.plot_time_series(lms_error[5000:6000],
+                                 f"Error rates {signal} Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_sbj, False)
+        eeg_obj.plot_time_series(laplace_error[5000:6000],
+                                 f"Error rates {signal} Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_sbj, False, True)
+        plt.savefig(
+            f"Results-Generation/subj{data_sbj}/Temporal_Error rates {signal} Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}")
+        params = np.append(
+            params, params_sbj["Amplitude Sig"])
+        params = np.append(
+            params, params_sbj["Frequency Sig"])
+        params = np.append(
+            params, params_sbj["Sum Sinusoids"])
+        params = np.append(
+            params, params_sbj["Bandpass Sinusoids"])
+        params = np.append(
+            params, params_sbj["Optimal Sinusoids"])
+        params = np.append(params, SIG_GAIN)
+        params = np.append(params, NOISE_GAIN)
+        params = np.append(params, params_sbj["Pure SNR"])
+        params = np.append(params, SNR_DNF)
+        params = np.append(params, SNR_LMS)
+        params = np.append(params, sbj)
+        params = np.append(params, params_sbj["Noise"])
+        results_df = results_df.append(pd.DataFrame(
+            [params], columns=results_df.columns), ignore_index=True)
+        writer = pd.ExcelWriter(
+            f"Results-Generation/subj{data_sbj}/results_{signal}.xlsx", engine='xlsxwriter')
+        results_df.to_excel(writer, "DNF Results", index=False)
+        writer.save()
+        writer.close()
+    if(signal == "Alpha"):
+        labels = noises_alpha
+    elif(signal == "Delta"):
+        labels = noises_delta
+    labels = labels[:noises]
+    dnf_snrs = dnf_snrs[:noises]
+    lms_snrs = lms_snrs[:noises]
+    laplace_snrs = laplace_snrs[:noises]
+    bar_plt = eeg_obj.bar_plot(
+        labels, dnf_snrs, lms_snrs, laplace_snrs, signal, data_sbj)
+
+
+# gen_eeg()
+with open('deepNeuronalFilter/signal.txt', 'r') as file:
+    signal = file.read().replace('\n', '')
+get_results(signal)

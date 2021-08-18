@@ -37,6 +37,8 @@ class EEG_GEN():
             artefact = 0
             noise_lengths = []
             for noise in noises:
+                self.load_alpha_data(dir, data_subj, eeg_subj, noise)
+            for noise in noises:
                 noise_lengths.append(
                     self.get_noise_length(str(eeg_subj), noise))
             N = self.get_min_samples_alpha(noise_lengths)
@@ -88,6 +90,8 @@ class EEG_GEN():
             noises = noise_source.split("+")
             artefact = 0
             noise_lengths = []
+            for noise in noises:
+                self.load_delta_data(dir, data_subj, eeg_subj, noise)
             for noise in noises:
                 noise_lengths.append(
                     self.get_noise_length(str(eeg_subj), noise))
@@ -188,10 +192,10 @@ class EEG_GEN():
         self.fs = fs
         self.alpha = A * np.sin(2 * np.pi * f * x / fs)
         if(sum_sines):
-            self.alpha += 2 * np.sin(2 * np.pi * freqs[0] * x / fs)
-            self.alpha += 0.1 * np.sin(2 * np.pi * freqs[1] * x / fs)
-            self.alpha += 0.3 * np.sin(2 * np.pi * freqs[3] * x / fs)
-            self.alpha += 0.01 * np.sin(2 * np.pi * freqs[4] * x / fs)
+            self.alpha += 10 * np.sin(2 * np.pi * freqs[0] * x / fs)
+            self.alpha += 12 * np.sin(2 * np.pi * freqs[1] * x / fs)
+            self.alpha += 15 * np.sin(2 * np.pi * freqs[3] * x / fs)
+            self.alpha += 10 * np.sin(2 * np.pi * freqs[4] * x / fs)
         if(bandpass):
             self.alpha = self.butter_bandpass(
                 self.alpha, freqs[0] - 1, freqs[4] + 1, self.fs, 2)
@@ -203,10 +207,10 @@ class EEG_GEN():
         self.fs = fs
         self.delta = A * np.sin(2 * np.pi * f * x / fs)
         if(sum_sines):
-            self.delta += 2 * np.sin(2 * np.pi * freqs[0] * x / fs)
-            self.delta += 0.1 * np.sin(2 * np.pi * freqs[1] * x / fs)
-            self.delta += 0.3 * np.sin(2 * np.pi * freqs[3] * x / fs)
-            self.delta += 0.01 * np.sin(2 * np.pi * freqs[4] * x / fs)
+            self.delta += 10 * np.sin(2 * np.pi * freqs[0] * x / fs)
+            self.delta += 12 * np.sin(2 * np.pi * freqs[1] * x / fs)
+            self.delta += 15 * np.sin(2 * np.pi * freqs[3] * x / fs)
+            self.delta += 10 * np.sin(2 * np.pi * freqs[4] * x / fs)
         if(bandpass):
             self.delta = self.butter_bandpass(
                 self.delta, freqs[0] - 1, freqs[4] + 1, self.fs, 2)
@@ -379,10 +383,6 @@ class EEG_GEN():
             noisy_pow = (np.sum(noisy_fft[start:end]**2))
             clean_pow = (np.sum(clean_fft[start:end]**2))
         if(calc == 0):
-            print("Noisy and Clean:")
-            print(noisy_pow, clean_pow)
-            print("Diff:")
-            print(noisy_pow - clean_pow)
             return (clean_pow)/np.abs(noisy_pow - clean_pow)
         elif(calc == 1):
             return clean_pow/noisy_pow
@@ -448,6 +448,7 @@ class EEG_GEN():
                  [len(idx2[0]) - 1]], abs(fourierTransform2[idx2[0][0]:idx2[0]
                                                             [len(idx2[0]) - 1]]))
         plt.title(title)
+        plt.xlim(start - 1,end + 1)
         plt.xlabel('Frequency (Hz)')
         plt.ylabel('Amplitude (' + r'$\mu$V/Hz)')
         plt.legend([f"{signal1}", f"{signal2}"])
@@ -479,15 +480,18 @@ class EEG_GEN():
         fig = plt.figure()
         return fig
 
-    def plot_time_series(self, signal, title, data_subj):
+    def plot_time_series(self, signal, title, data_subj, fig = True, legend = False):
         plt.plot(signal)
         plt.title(title)
         plt.ylabel("Signal Voltage " + r'($\mu$V)')
         plt.xlabel("Time (s)")
         # plt.ylim(-7, 7)
-        plt.savefig(f"Results-Generation/subj{data_subj}/Temporal_{title}")
-        fig = plt.figure()
-        return fig
+        if(legend == True):
+            plt.legend(["DNF Error", "LMS Error", "Laplace Error"])
+        if(fig):
+            fig = plt.figure()
+            plt.savefig(f"Results-Generation/subj{data_subj}/Temporal_{title}")
+            return fig
 
     def plot_all(self, eeg, noise):
         eeg_time = self.plot_time_series(eeg, "Noisy Time Spectrum")
@@ -497,32 +501,36 @@ class EEG_GEN():
             noise, self.fs, "Noise Frequency Spectrum")
         plt.show()
 
-    def bar_plot(self, labels, dnf_snr, lms_snr, signal, data_subj):
-        print(labels)
+    def bar_plot(self, labels, dnf_snr, lms_snr, laplace_snr, signal, data_subj):
         x = np.arange(len(labels))  # the label locations
         width = 0.35  # the width of the bars
         dnf_max = np.max(dnf_snr)
         dnf_min = np.min(dnf_snr)
         lms_max = np.max(lms_snr)
         lms_min = np.min(lms_snr)
-        max_snr = max(dnf_max, lms_max)
-        min_snr = min(dnf_min, lms_min)
+        laplace_max = np.max(laplace_snr)
+        laplace_min = np.min(laplace_snr)
+        max_snr = max(dnf_max, lms_max, laplace_max)
+        min_snr = min(dnf_min, lms_min, laplace_min)
         fig, ax = plt.subplots()
         rects1 = ax.bar(x - width/2, dnf_snr,
                         width, label='DNF')
-        rects2 = ax.bar(x + width/2, lms_snr, width, label='LMS')
+        rects2 = ax.bar(x, lms_snr, width, label='LMS')
+        rects3 = ax.bar(x + width/2, laplace_snr, width, label='Laplace')
 
         # Add some text for labels, title and custom x-axis tick labels, etc.
         ax.set_ylabel('SNR Improvements (dB)')
         ax.set_xlabel('Noise Sources')
-        ax.set_title('SNR of DNF and LMS Improvements')
+        ax.set_title(
+            f"SNR of DNF, LMS and Laplace Improvements for {signal} waves")
         ax.set_xticks(x)
         plt.ylim(min_snr - 5, max_snr + 5)
         ax.set_xticklabels(labels)
         ax.legend()
 
-        ax.bar_label(rects1, padding=3)
-        ax.bar_label(rects2, padding=3)
+        # ax.bar_label(rects1, padding=3)
+        # ax.bar_label(rects2, padding=3)
+        # ax.bar_label(rects3, padding=3)
 
         fig.tight_layout()
         plt.savefig(

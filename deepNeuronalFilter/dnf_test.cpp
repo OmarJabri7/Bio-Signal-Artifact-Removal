@@ -73,6 +73,7 @@ fstream outerFile;
 fstream lmsFile;
 fstream lmsRemoverFile;
 fstream laplaceFile;
+fstream errorFile;
 
 ifstream eegInfilePure;
 ifstream signalToUse;
@@ -116,6 +117,8 @@ void closeFiles()
     outerFile.close();
     lmsFile.close();
     lmsRemoverFile.close();
+    laplaceFile.close();
+    errorFile.close();
 }
 int main(int argc, const char *argv[])
 {
@@ -125,12 +128,12 @@ int main(int argc, const char *argv[])
     cout << signals << ":" << endl;
     // if (signals == "Alpha")
     // {
-    const float outerGain[] = {20.0, 20.0, 20.0, 20.0, 20.0};
-    const float innerGain[] = {1.0, 1.0, 1.0, 1.0, 1.0};
-    const float removerGain[] = {2.5, 2.5, 2.5, 2.5, 2.5};
-    const float fnnGain[] = {1.0, 1.0, 1.0, 1.0, 1.0};
-    const float w[] = {0.5, 0.5, 0.5, 0.5, 0.5};
-    const float b[] = {0, 0, 0, 0, 0};
+    const float outerGain[] = {20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0};
+    const float innerGain[] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+    const float removerGain[] = {2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5};
+    const float fnnGain[] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+    const float w[] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+    const float b[] = {0, 0, 0, 0, 0, 0, 0};
     // }
     // else if (signals == "Delta")
     // {
@@ -166,7 +169,9 @@ int main(int argc, const char *argv[])
         outerFile.open("./cppData/subject" + sbjct + "/outer_subject_" + signals + sbjct + ".tsv", fstream::out);
         lmsFile.open("./cppData/subject" + sbjct + "/lmsOutput_subject_" + signals + sbjct + ".tsv", fstream::out);
         lmsRemoverFile.open("./cppData/subject" + sbjct + "/lmsCorrelation_subject_" + signals + sbjct + ".tsv", fstream::out);
+        laplaceFile.open("./cppData/subject" + sbjct + "/laplace_subject_" + signals + sbjct + ".tsv", fstream::out);
         eegInfilePure.open("./SubjectData/" + signals + "/Pure/EEG_Subject" + sbjct + ".tsv");
+        errorFile.open("./cppData/subject" + sbjct + "/error_subject_" + signals + sbjct + ".tsv", fstream::out);
 
         for (int i = 0; i < numTrials; i++)
         {
@@ -262,16 +267,18 @@ int main(int argc, const char *argv[])
 
             // NNP->snapWeights("cppData", "Pure", SUBJECT);
             NNN->snapWeights("cppData", "Noisy", SUBJECT);
+            double laplace = innerDataNoisy - outerDataNoisy;
 
             // corrLMSPure += lmsFilterPure->filter(outerDataPure);
-            corrLMSNoisy += lmsFilterNoisy->filter(outerDataNoisy / outerGain[s]);
+            corrLMSNoisy += lmsFilterNoisy->filter(outerDataNoisy);
 
             // lmsOutputPure = innerPure - corrLMSPure;
-            lmsOutputNoisy = innerDataNoisy / innerGain[s] - corrLMSNoisy;
+            lmsOutputNoisy = innerDataNoisy - corrLMSNoisy;
 
             // lmsFilterPure->lms_update(lmsOutputPure);
             lmsFilterNoisy->lms_update(lmsOutputNoisy);
-
+            laplaceFile << "-1"
+                        << " " << laplace << endl;
             lmsFile << "-1"
                     << " " << lmsOutputNoisy << endl;
             lmsRemoverFile << "-1"
@@ -280,6 +287,7 @@ int main(int argc, const char *argv[])
                       << " " << innerNoisy << endl;
             outerFile << "-1"
                       << " " << outerNoisy << endl;
+            errorFile << fNNNoisy << " " << lmsOutputNoisy << " " << laplace << endl;
         }
         progressBar.done();
         paramsFile << NLAYERS << endl;
