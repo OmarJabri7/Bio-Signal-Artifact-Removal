@@ -16,3 +16,4 @@ make
 python3 ../generate_eeg.py
 ./eeg_filter
 python3 ../get_results.py
+python3 ../t_test.py

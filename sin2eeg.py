@@ -129,7 +129,6 @@ def gen_eeg():
                                   f"Pure vs Noisy Alphas Frequency Subject {data_sbj}, Noise: {noises_alpha[sbj]}", "Pure Alpha", "Noisy Alpha", data_sbj)
         eeg_obj.plot_freq_resp_vs(1, pure_eeg_delta, eeg_delta, eeg_obj.fs,
                                   f"Pure vs Noisy Deltas Frequency Subject {data_sbj}, Noise: {noises_delta[sbj]}", "Pure Delta", "Noisy Delta", data_sbj)
-        # plt.show()
         noise_delta *= NOISE_GAIN_DELTA
         noise_alpha *= NOISE_GAIN_ALPHA
         eeg_alpha *= ALPHA_GAIN
