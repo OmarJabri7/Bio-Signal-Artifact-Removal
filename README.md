@@ -54,3 +54,16 @@ For each subject, a variety of noise recordings are added to different delta and
 ![image-20210820174909398](file:///Users/omar/Library/Application Support/typora-user-images/image-20210820174909398.png?lastModify=1629479172)
 
 # Setup System
+
+## Python Libraries:
+
+`pip install pandas`
+
+`pip install numpy`
+
+`pip install matplotlib`
+
+`pip install scipy`
+
+## C++ Libraries:
+

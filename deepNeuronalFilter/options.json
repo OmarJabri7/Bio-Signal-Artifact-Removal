@@ -1,0 +1,6 @@
+{
+    "noises_alpha": ["eyescrunching", "jaw",
+               "raisingeyebrows", "movehat", "movehead"],
+    "noises_delta": ["blink", "templerun", "sudoku", "flow", "wordsearch"],
+    "subject": 0
+}

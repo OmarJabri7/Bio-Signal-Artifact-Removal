@@ -13,5 +13,6 @@ touch signal.txt
 echo $1 > signal.txt
 cmake .
 make
+python3 ../generate_eeg.py
 ./eeg_filter
-
+python3 ../get_results.py
