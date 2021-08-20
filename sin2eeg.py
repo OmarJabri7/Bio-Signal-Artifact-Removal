@@ -26,15 +26,14 @@ def gen_eeg():
     eeg_obj = EEG_GEN()
     alpha = range(ALPHA_LOW, ALPHA_HIGH)
     delta = range(DELTA_LOW, DELTA_HIGH)
-    if(not os.path.exists("../Results-Generation/subj{data_sbj}/results_Alpha.xlsx") and not os.path.exists("../Results-Generation/subj{data_sbj}/results_Delta.xlsx")):
-        data_frame_alpha = pd.DataFrame(
-            columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta", "Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids",  "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF", "SNR LMS", "Subject Number", "Noise"])
-        data_frame_delta = pd.DataFrame(
-            columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta", "Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids", "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF", "SNR LMS", "Subject Number", "Noise"])
-        eeg_obj.save_xls([data_frame_alpha],
-                         f"../Results-Generation/subj{data_sbj}/results_Alpha.xlsx", ["DNF Results"])
-        eeg_obj.save_xls([data_frame_delta],
-                         f"../Results-Generation/subj{data_sbj}/results_Delta.xlsx", ["DNF Results"])
+    data_frame_alpha = pd.DataFrame(
+        columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta", "Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids",  "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF", "SNR LMS", "Subject Number", "Noise"])
+    data_frame_delta = pd.DataFrame(
+        columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta", "Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids", "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF", "SNR LMS", "Subject Number", "Noise"])
+    eeg_obj.save_xls([data_frame_alpha],
+                     f"../Results-Generation/subj{data_sbj}/results_Alpha.xlsx", ["DNF Results"])
+    eeg_obj.save_xls([data_frame_delta],
+                     f"../Results-Generation/subj{data_sbj}/results_Delta.xlsx", ["DNF Results"])
     params_df_alpha = pd.DataFrame(
         columns=["Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids", "Noise Gain", "Signal Gain", "Pure SNR",  "Subject Number", "Noise"])
     params_df_delta = pd.DataFrame(
