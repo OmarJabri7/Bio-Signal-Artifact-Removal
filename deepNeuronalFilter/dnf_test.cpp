@@ -75,7 +75,6 @@ fstream lmsRemoverFile;
 fstream laplaceFile;
 fstream errorFile;
 
-ifstream eegInfilePure;
 ifstream signalToUse;
 ifstream eegInfileNoisy;
 
@@ -83,31 +82,26 @@ int subjectsNb = 2;
 
 std::vector<double> minErrors;
 
-double sampleNum, sampleNumNoisy, outerDataPure, innerDataPure, outerDataNoisy, innerDataNoisy;
+double sampleNum, sampleNumNoisy, outerDataNoisy, innerDataNoisy;
 double newParam;
 int paramCount, inParam = 0;
 double errorNN;
 double outerGain, innerGain, removerGain, fnnGain, w, b;
-double outerPureDelayLine[outerDelayLineLength] = {0.0};
 double outerNoisyDelayLine[outerDelayLineLength] = {0.0};
-boost::circular_buffer<double> innerPureDelayLine(innerDelayLineLength);
 boost::circular_buffer<double> innerNoisyDelayLine(innerDelayLineLength);
 int numInputs = outerDelayLineLength;
 int nNeurons[NLAYERS] = {N5, N4, N3, N2, N1, N0};
 int *numNeuronsP = nNeurons;
-Net *NNP = new Net(NLAYERS, numNeuronsP, numInputs, 0, "DNF Pure");
 Net *NNN = new Net(NLAYERS, numNeuronsP, numInputs, 0, "DNF Noisy");
 const int numTrials = 2;
 Fir1 *outerFilter[numTrials];
 Fir1 *innerFilter[numTrials];
-Fir1 *lmsFilterPure = nullptr;
 Fir1 *lmsFilterNoisy = nullptr;
 
 void closeFiles()
 {
     paramsFile.close();
 
-    eegInfilePure.close();
     eegInfileNoisy.close();
     signalToUse.close();
     weightFile.close();
@@ -170,7 +164,7 @@ int main(int argc, const char *argv[])
         lmsFile.open("./cppData/subject" + sbjct + "/lmsOutput_subject_" + signals + sbjct + ".tsv", fstream::out);
         lmsRemoverFile.open("./cppData/subject" + sbjct + "/lmsCorrelation_subject_" + signals + sbjct + ".tsv", fstream::out);
         laplaceFile.open("./cppData/subject" + sbjct + "/laplace_subject_" + signals + sbjct + ".tsv", fstream::out);
-        eegInfilePure.open("./SubjectData/" + signals + "/Pure/EEG_Subject" + sbjct + ".tsv");
+        eegInfileNoisy.open("./SubjectData/" + signals + "/Noisy/EEG_Subject" + sbjct + ".tsv");
         errorFile.open("./cppData/subject" + sbjct + "/error_subject_" + signals + sbjct + ".tsv", fstream::out);
 
         for (int i = 0; i < numTrials; i++)
@@ -183,99 +177,70 @@ int main(int argc, const char *argv[])
             innerFilter[i] = new Fir1("./pyFiles/forInner.dat");
             innerFilter[i]->reset();
         }
-        // lmsFilterPure = new Fir1(LMS_COEFF);
-        // lmsFilterPure->setLearningRate(LMS_LEARNING_RATE);
         lmsFilterNoisy = new Fir1(LMS_COEFF);
         lmsFilterNoisy->setLearningRate(LMS_LEARNING_RATE);
-        // double corrLMSPure = 0;
-        // double lmsOutputPure = 0;
         double corrLMSNoisy = 0;
         double lmsOutputNoisy = 0;
-        // NNP->initNetwork(Neuron::W_RANDOM, Neuron::B_RANDOM, Neuron::Act_Sigmoid);
         NNN->initNetwork(Neuron::W_RANDOM, Neuron::B_RANDOM, Neuron::Act_Sigmoid);
         double minError;
         int lineNb = 0;
         std::string line;
-        while (!eegInfilePure.eof())
+        while (!eegInfileNoisy.eof())
         {
-            std::getline(eegInfilePure, line);
+            std::getline(eegInfileNoisy, line);
             lineNb++;
         }
         cout << lineNb << endl;
         progresscpp::ProgressBar progressBar(lineNb, 70);
-        eegInfilePure.close();
-        eegInfilePure.open("./SubjectData/" + signals + "/Pure/EEG_Subject" + sbjct + ".tsv");
+        eegInfileNoisy.close();
+
         eegInfileNoisy.open("./SubjectData/" + signals + "/Noisy/EEG_Subject" + sbjct + ".tsv");
 
-        while (!eegInfileNoisy.eof() && !eegInfilePure.eof())
+        while (!eegInfileNoisy.eof())
         {
             ++progressBar;
             progressBar.display();
             count += 1;
-            // eegInfilePure >>
-            //     sampleNum >> innerDataPure >> outerDataPure;
             eegInfileNoisy >>
                 sampleNumNoisy >> innerDataNoisy >> outerDataNoisy;
-            // outerDataPure *= outerGain[s];
-            // innerDataPure *= innerGain[s];
             outerDataNoisy *= outerGain[s];
             innerDataNoisy *= innerGain[s];
-            // double innerFilteredPure = innerFilter[0]->filter(innerDataPure);
             double innerFilteredNoisy = innerFilter[1]->filter(innerDataNoisy);
-            // innerPureDelayLine.push_back(innerDataPure);
-            // double innerPure = innerPureDelayLine[0];
             innerNoisyDelayLine.push_back(innerDataNoisy);
             double innerNoisy = innerNoisyDelayLine[0];
 
-            // double outerPure = outerFilter[0]->filter(outerDataPure);
             double outerNoisy = outerFilter[1]->filter(outerDataNoisy);
             for (int i = outerDelayLineLength - 1; i > 0; i--)
             {
-                // outerPureDelayLine[i] = outerPureDelayLine[i - 1];
                 outerNoisyDelayLine[i] = outerNoisyDelayLine[i - 1];
             }
-            // outerPureDelayLine[0] = outerDataPure;
             outerNoisyDelayLine[0] = outerDataNoisy;
-            // double *outerDelayedPure = &outerPureDelayLine[0];
             double *outerDelayedNoisy = &outerNoisyDelayLine[0];
 
-            // NNP->setInputs(outerDelayedPure);  // Here Input
             NNN->setInputs(outerDelayedNoisy); // Here Input
-            // NNP->propInputs();
             NNN->propInputs();
-            // double removerPure = NNP->getOutput(0) * removerGain[s];
             double removerNoisy = NNN->getOutput(0) * removerGain[s];
-            // double fNNPure = (innerPure - removerPure) * fnnGain[s];
             double fNNNoisy = (innerNoisy - removerNoisy) * fnnGain[s];
             removerFile
                 << "-1"
                 << " " << removerNoisy << endl;
             nnFile << "-1"
                    << " " << fNNNoisy << endl;
-            // NNP->setErrorCoeff(0, 1, 0, 0, 0, 0); //global, back, mid, forward, local, echo error
             NNN->setErrorCoeff(0, 1, 0, 0, 0, 0); //global, back, mid, forward, local, echo error
-            // NNP->setBackwardError(fNNPure);
             NNN->setBackwardError(fNNNoisy);
-            // NNP->propErrorBackward();
             NNN->propErrorBackward();
 
-            // NNP->setLearningRate(w[s], b[s]);
             NNN->setLearningRate(w[s], b[s]);
 
-            // NNP->updateWeights();
             NNN->updateWeights();
 
-            // NNP->snapWeights("cppData", "Pure", SUBJECT);
             NNN->snapWeights("cppData", "Noisy", SUBJECT);
             double laplace = innerDataNoisy - outerDataNoisy;
 
-            // corrLMSPure += lmsFilterPure->filter(outerDataPure);
             corrLMSNoisy += lmsFilterNoisy->filter(outerDataNoisy);
 
-            // lmsOutputPure = innerPure - corrLMSPure;
             lmsOutputNoisy = innerDataNoisy - corrLMSNoisy;
 
-            // lmsFilterPure->lms_update(lmsOutputPure);
             lmsFilterNoisy->lms_update(lmsOutputNoisy);
             laplaceFile << "-1"
                         << " " << laplace << endl;
