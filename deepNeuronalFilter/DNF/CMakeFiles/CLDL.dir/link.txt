@@ -1,0 +1,2 @@
+/Library/Developer/CommandLineTools/usr/bin/ar qc libCLDL.a CMakeFiles/CLDL.dir/lib/Layer.cpp.o CMakeFiles/CLDL.dir/lib/Net.cpp.o CMakeFiles/CLDL.dir/lib/Neuron.cpp.o
+/Library/Developer/CommandLineTools/usr/bin/ranlib libCLDL.a
