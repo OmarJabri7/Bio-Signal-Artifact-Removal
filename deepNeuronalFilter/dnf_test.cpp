@@ -79,7 +79,7 @@ ifstream eegInfilePure;
 ifstream signalToUse;
 ifstream eegInfileNoisy;
 
-int subjectsNb = 5;
+int subjectsNb = 2;
 
 std::vector<double> minErrors;
 

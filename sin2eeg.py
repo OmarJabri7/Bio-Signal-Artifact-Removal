@@ -6,13 +6,13 @@ import matplotlib.pyplot as plt
 
 dir = "Data/experiment_data"
 res_dir = "deepNeuronalFilter/SubjectData"
-noises = 2
-data_sbj = 3
+data_sbj = 7
 noises_alpha = ["eyescrunching+jaw", "jaw+raisingeyebrows"]
 noises_delta = ["blink+templerun", "blink+sudoku"]
 # noises_alpha = ["eyescrunching", "jaw",
 #                 "raisingeyebrows", "movehat", "movehead"]
 # noises_delta = ["blink", "templerun", "sudoku", "flow", "wordsearch"]
+noises = len(noises_alpha)
 DELTA_LOW = 1
 DELTA_HIGH = 6
 ALPHA_LOW = 8
