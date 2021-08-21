@@ -304,7 +304,7 @@ class EEG_GEN():
         sig_fake = np.column_stack((eeg_data, noise_data))
         signal_df = pd.DataFrame(sig_fake)
         signal_df.to_csv(
-            f"deepNeuronalFilter/SubjectData/{sig_type}/EEG_Subject{subj}.tsv", index=True, header=False, sep="\t")
+            f"SubjectData/{sig_type}/EEG_Subject{subj}.tsv", index=True, header=False, sep="\t")
         print(f"{sig_type} Signals Saved!")
 
     def save_xls(self, list_dfs, xls_path, sheet_names):
@@ -415,7 +415,7 @@ class EEG_GEN():
         # plt.xlim(0, 200)
         plt.xlabel('Frequency (Hz)')
         plt.ylabel('Amplitude (' + r'$\mu$V/Hz)')
-        plt.savefig(f"Results-Generation/subj{data_subj}/Frequency_{title}")
+        plt.savefig(f"../Results-Generation/subj{data_subj}/Frequency_{title}")
         fig = plt.figure()
         return fig
 
@@ -448,12 +448,12 @@ class EEG_GEN():
                  [len(idx2[0]) - 1]], abs(fourierTransform2[idx2[0][0]:idx2[0]
                                                             [len(idx2[0]) - 1]]))
         plt.title(title)
-        plt.xlim(start - 1,end + 1)
+        plt.xlim(start - 1, end + 1)
         plt.xlabel('Frequency (Hz)')
         plt.ylabel('Amplitude (' + r'$\mu$V/Hz)')
         plt.legend([f"{signal1}", f"{signal2}"])
         plt.savefig(
-            f"Results-Generation/subj{data_subj}/Frequency_Diff_{title}")
+            f"../Results-Generation/subj{data_subj}/Frequency_Diff_{title}")
         fig = plt.figure()
         return fig
 
@@ -480,7 +480,7 @@ class EEG_GEN():
         fig = plt.figure()
         return fig
 
-    def plot_time_series(self, signal, title, data_subj, fig = True, legend = False):
+    def plot_time_series(self, signal, title, data_subj, fig=True, legend=False):
         plt.plot(signal)
         plt.title(title)
         plt.ylabel("Signal Voltage " + r'($\mu$V)')
@@ -490,7 +490,8 @@ class EEG_GEN():
             plt.legend(["DNF Error", "LMS Error", "Laplace Error"])
         if(fig):
             fig = plt.figure()
-            plt.savefig(f"Results-Generation/subj{data_subj}/Temporal_{title}")
+            plt.savefig(
+                f"../Results-Generation/subj{data_subj}/Temporal_{title}")
             return fig
 
     def plot_all(self, eeg, noise):
@@ -534,5 +535,5 @@ class EEG_GEN():
 
         fig.tight_layout()
         plt.savefig(
-            f"Results-Generation/subj{data_subj}/Bar_Plot_SNRs_{signal}")
+            f"../Results-Generation/subj{data_subj}/Bar_Plot_SNRs_{signal}")
         return fig

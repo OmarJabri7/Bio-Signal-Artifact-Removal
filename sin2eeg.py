@@ -3,16 +3,10 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 
-dir = "Data/experiment_data"
-res_dir = "deepNeuronalFilter/SubjectData"
-data_sbj = 7
-noises_alpha = ["eyescrunching+jaw", "jaw+raisingeyebrows"]
-noises_delta = ["blink+templerun", "blink+sudoku"]
-# noises_alpha = ["eyescrunching", "jaw",
-#                 "raisingeyebrows", "movehat", "movehead"]
-# noises_delta = ["blink", "templerun", "sudoku", "flow", "wordsearch"]
-noises = len(noises_alpha)
+dir = "../Data/experiment_data"
+res_dir = "SubjectData"
 DELTA_LOW = 1
 DELTA_HIGH = 6
 ALPHA_LOW = 8
@@ -22,18 +16,24 @@ ALPHA_HIGH = 14
 
 
 def gen_eeg():
+    options = open("options.json")
+    input_data = json.load(options)
+    options.close()
+    noises_alpha = input_data["noises_alpha"]
+    noises_delta = input_data["noises_delta"]
+    data_sbj = input_data["subject"]
+    noises = min(len(noises_alpha), len(noises_delta))
     eeg_obj = EEG_GEN()
     alpha = range(ALPHA_LOW, ALPHA_HIGH)
     delta = range(DELTA_LOW, DELTA_HIGH)
-    if(not os.path.exists("Results-Generation/subj{data_sbj}/results_Alpha.xlsx") and not os.path.exists("Results-Generation/subj{data_sbj}/results_Delta.xlsx")):
-        data_frame_alpha = pd.DataFrame(
-            columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta", "Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids",  "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF", "SNR LMS", "Subject Number", "Noise"])
-        data_frame_delta = pd.DataFrame(
-            columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta", "Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids", "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF", "SNR LMS", "Subject Number", "Noise"])
-        eeg_obj.save_xls([data_frame_alpha],
-                         f"Results-Generation/subj{data_sbj}/results_Alpha.xlsx", ["DNF Results"])
-        eeg_obj.save_xls([data_frame_delta],
-                         f"Results-Generation/subj{data_sbj}/results_Delta.xlsx", ["DNF Results"])
+    data_frame_alpha = pd.DataFrame(
+        columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta", "Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids",  "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF", "SNR LMS", "Subject Number", "Noise"])
+    data_frame_delta = pd.DataFrame(
+        columns=["Layers Number", "Outer Inputs", "Inner Inputs", "Outer Gain", "Inner Gain", "Remover Gain", "Feedback Gain", "weight Eta", "bias Eta", "Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids", "Signal Gain", "Noise Gain", "SNR Before DNF", "SNR After DNF", "SNR LMS", "Subject Number", "Noise"])
+    eeg_obj.save_xls([data_frame_alpha],
+                     f"../Results-Generation/subj{data_sbj}/results_Alpha.xlsx", ["DNF Results"])
+    eeg_obj.save_xls([data_frame_delta],
+                     f"../Results-Generation/subj{data_sbj}/results_Delta.xlsx", ["DNF Results"])
     params_df_alpha = pd.DataFrame(
         columns=["Amplitude Sig", "Frequency Sig", "Sum Sinusoids", "Bandpass Sinusoids", "Optimal Sinusoids", "Noise Gain", "Signal Gain", "Pure SNR",  "Subject Number", "Noise"])
     params_df_delta = pd.DataFrame(
@@ -129,7 +129,6 @@ def gen_eeg():
                                   f"Pure vs Noisy Alphas Frequency Subject {data_sbj}, Noise: {noises_alpha[sbj]}", "Pure Alpha", "Noisy Alpha", data_sbj)
         eeg_obj.plot_freq_resp_vs(1, pure_eeg_delta, eeg_delta, eeg_obj.fs,
                                   f"Pure vs Noisy Deltas Frequency Subject {data_sbj}, Noise: {noises_delta[sbj]}", "Pure Delta", "Noisy Delta", data_sbj)
-        # plt.show()
         noise_delta *= NOISE_GAIN_DELTA
         noise_alpha *= NOISE_GAIN_ALPHA
         eeg_alpha *= ALPHA_GAIN
@@ -158,9 +157,16 @@ def gen_eeg():
 
 
 def get_results(signal):
+    options = open("options.json")
+    input_data = json.load(options)
+    options.close()
+    noises_alpha = input_data["noises_alpha"]
+    noises_delta = input_data["noises_delta"]
+    data_sbj = input_data["subject"]
+    noises = min(len(noises_alpha), len(noises_delta))
     eeg_obj = EEG_GEN()
     results_df = pd.read_excel(
-        f"Results-Generation/subj{data_sbj}/results_{signal}.xlsx", "DNF Results")
+        f"../Results-Generation/subj{data_sbj}/results_{signal}.xlsx", "DNF Results")
     init_df = pd.read_excel(r"initial_params.xlsx", signal)
     dnf_snrs = []
     lms_snrs = []
@@ -169,7 +175,7 @@ def get_results(signal):
     for sbj in range(noises):
         params_sbj = init_df.loc[init_df['Subject Number'] == sbj]
         dnf_data = np.loadtxt(
-            f"deepNeuronalFilter/cppData/subject{sbj}/fnn_subject_{signal}{sbj}.tsv")
+            f"cppData/subject{sbj}/fnn_subject_{signal}{sbj}.tsv")
         NOISE_GAIN = params_sbj["Noise Gain"].values
         SIG_GAIN = params_sbj["Signal Gain"].values
         dnf_pure = dnf_data[:, 0]
@@ -177,9 +183,9 @@ def get_results(signal):
         dnf_noisy = dnf_noisy[impulse:]
         dnf_noisy /= SIG_GAIN
         lms_data = np.loadtxt(
-            f"deepNeuronalFilter/cppData/subject{sbj}/lmsOutput_subject_{signal}{sbj}.tsv")
+            f"cppData/subject{sbj}/lmsOutput_subject_{signal}{sbj}.tsv")
         laplace_data = np.loadtxt(
-            f"deepNeuronalFilter/cppData/subject{sbj}/laplace_subject_{signal}{sbj}.tsv")
+            f"cppData/subject{sbj}/laplace_subject_{signal}{sbj}.tsv")
         lms_pure = lms_data[:, 0]
         lms_noisy = lms_data[:, 1]
         laplace_noisy = laplace_data[:, 1]
@@ -187,13 +193,13 @@ def get_results(signal):
         lms_noisy = lms_noisy[impulse:]
         lms_noisy /= SIG_GAIN
         remover_data = np.loadtxt(
-            f"deepNeuronalFilter/cppData/subject{sbj}/remover_subject_{signal}{sbj}.tsv")
+            f"cppData/subject{sbj}/remover_subject_{signal}{sbj}.tsv")
         remover_pure = remover_data[:, 0]
         remover_noisy = remover_data[:, 1]
         pure_sig = np.loadtxt(
-            f"deepNeuronalFilter/SubjectData/{signal}/Pure/EEG_Subject{sbj}.tsv")
+            f"SubjectData/{signal}/Pure/EEG_Subject{sbj}.tsv")
         noisy_sig = np.loadtxt(
-            f"deepNeuronalFilter/SubjectData/{signal}/Noisy/EEG_Subject{sbj}.tsv")
+            f"SubjectData/{signal}/Noisy/EEG_Subject{sbj}.tsv")
         inner_pure = pure_sig[:, 1]
         outer_pure = pure_sig[:, 2]
         inner_noisy = noisy_sig[:, 1]
@@ -201,9 +207,9 @@ def get_results(signal):
         outer_noisy = noisy_sig[:, 2]
         inner_pure = inner_pure[impulse:]
         parameters = np.loadtxt(
-            f"deepNeuronalFilter/cppData/subject{sbj}/cppParams_subject_{signal}{sbj}.tsv")
+            f"cppData/subject{sbj}/cppParams_subject_{signal}{sbj}.tsv")
         errors = np.loadtxt(
-            f"deepNeuronalFilter/cppData/subject{sbj}/error_subject_{signal}{sbj}.tsv")
+            f"cppData/subject{sbj}/error_subject_{signal}{sbj}.tsv")
         dnf_error = errors[:, 0]
         lms_error = errors[:, 1]
         laplace_error = errors[:, 2]
@@ -271,7 +277,7 @@ def get_results(signal):
         eeg_obj.plot_time_series(laplace_error[5000:6000],
                                  f"Error rates {signal} Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}", data_sbj, False, True)
         plt.savefig(
-            f"Results-Generation/subj{data_sbj}/Temporal_Error rates {signal} Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}")
+            f"../Results-Generation/subj{data_sbj}/Temporal_Error rates {signal} Temporal Subject {data_sbj}, Noise: {params_sbj['Noise'].values}")
         params = np.append(
             params, params_sbj["Amplitude Sig"])
         params = np.append(
@@ -292,7 +298,7 @@ def get_results(signal):
         results_df = results_df.append(pd.DataFrame(
             [params], columns=results_df.columns), ignore_index=True)
         writer = pd.ExcelWriter(
-            f"Results-Generation/subj{data_sbj}/results_{signal}.xlsx", engine='xlsxwriter')
+            f"../Results-Generation/subj{data_sbj}/results_{signal}.xlsx", engine='xlsxwriter')
         results_df.to_excel(writer, "DNF Results", index=False)
         writer.save()
         writer.close()
@@ -306,9 +312,3 @@ def get_results(signal):
     laplace_snrs = laplace_snrs[:noises]
     bar_plt = eeg_obj.bar_plot(
         labels, dnf_snrs, lms_snrs, laplace_snrs, signal, data_sbj)
-
-
-# gen_eeg()
-with open('deepNeuronalFilter/signal.txt', 'r') as file:
-    signal = file.read().replace('\n', '')
-get_results(signal)
