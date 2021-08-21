@@ -6,8 +6,10 @@ significance_lvl = 0.05
 
 
 def get_stats():
-    snrs_alpha = pd.read_excel(r"Results-Generation/t-test/snrs.xlsx", "Alpha")
-    snrs_delta = pd.read_excel(r"Results-Generation/t-test/snrs.xlsx", "Delta")
+    snrs_alpha = pd.read_excel(
+        r"../Results-Generation/t-test/snrs.xlsx", "Alpha")
+    snrs_delta = pd.read_excel(
+        r"../Results-Generation/t-test/snrs.xlsx", "Delta")
     DNF_alpha = snrs_alpha["DNF"]
     ORIG_alpha = snrs_alpha["ORIG"]
     DNF_delta = snrs_delta["DNF"]

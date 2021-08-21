@@ -251,6 +251,9 @@ fir_DIR:PATH=/usr/local/lib/cmake/fir
 //The directory containing a CMake configuration file for iir.
 iir_DIR:PATH=/usr/local/lib/cmake/iir
 
+//The directory containing a CMake configuration file for nlohmann_json.
+nlohmann_json_DIR:PATH=nlohmann_json_DIR-NOTFOUND
+
 
 ########################
 # INTERNAL cache entries
