@@ -19,7 +19,11 @@
 #include "tqdm.h"
 #include "ProgressBar.h"
 
-std::vector<double> linspace(double start_in, double end_in, double num_in)
+/** Setup noise sources */
+int noisesNb = 5;
+/**Setup parameters for parameters earch algorithm */
+std::vector<double>
+linspace(double start_in, double end_in, double num_in)
 {
 
     std::vector<double> linspaced;
@@ -64,7 +68,7 @@ std::vector<std::vector<double>> params = {
     removerGainParams, feedbackGainParams,
     wEtaParams, bEtaParams};
 std::vector<double> errors;
-
+/** Setup files for input and output streams */
 fstream paramsFile;
 
 fstream nnFile, removerFile, weightFile;
@@ -78,26 +82,25 @@ fstream errorFile;
 ifstream signalToUse;
 ifstream eegInfileNoisy;
 
-int subjectsNb = 2;
-
+/** Setup variable for minimum error parameters */
 std::vector<double> minErrors;
-
+/** Gains and data for noisy EEG */
 double sampleNum, sampleNumNoisy, outerDataNoisy, innerDataNoisy;
 double newParam;
 int paramCount, inParam = 0;
 double errorNN;
 double outerGain, innerGain, removerGain, fnnGain, w, b;
+/** Setup delay line for FIR structure of the neural network */
 double outerNoisyDelayLine[outerDelayLineLength] = {0.0};
 boost::circular_buffer<double> innerNoisyDelayLine(innerDelayLineLength);
+/** Setup neural network with n neurons */
 int numInputs = outerDelayLineLength;
 int nNeurons[NLAYERS] = {N5, N4, N3, N2, N1, N0};
 int *numNeuronsP = nNeurons;
 Net *NNN = new Net(NLAYERS, numNeuronsP, numInputs, 0, "DNF Noisy");
-const int numTrials = 2;
-Fir1 *outerFilter[numTrials];
-Fir1 *innerFilter[numTrials];
+/** Setup lms filter with FIR structure from FIR library */
 Fir1 *lmsFilterNoisy = nullptr;
-
+/** Function to automatically close files after execution */
 void closeFiles()
 {
     paramsFile.close();
@@ -114,32 +117,23 @@ void closeFiles()
     laplaceFile.close();
     errorFile.close();
 }
+/** Main */
 int main(int argc, const char *argv[])
 {
+    /** Extract signal to operate on */
     signalToUse.open("signal.txt");
     string signals;
     signalToUse >> signals;
     cout << signals << ":" << endl;
-    // if (signals == "Alpha")
-    // {
+    /** Setup gains for each noise type */
     const float outerGain[] = {20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0};
     const float innerGain[] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
     const float removerGain[] = {2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5};
     const float fnnGain[] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
     const float w[] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
     const float b[] = {0, 0, 0, 0, 0, 0, 0};
-    // }
-    // else if (signals == "Delta")
-    // {
-    //     cout << "HIBS USHS" << endl;
-    //     const float outerGain[] = {20.0, 20.0, 20.0, 20.0, 20.0};
-    //     const float innerGain[] = {1.0, 1.0, 1.0, 1.0, 1.0};
-    //     const float removerGain[] = {2.5, 2.5, 2.5, 2.5, 2.5};
-    //     const float fnnGain[] = {1, 1, 1, 1, 1};
-    //     const float w[] = {0.5, 0.5, 0.0001, 0.5, 0.5};
-    //     const float b[] = {0, 0, 0, 0, 0};
-    // }
-    for (int s = 0; s < subjectsNb; s++)
+    /** Loop over noisy alpha/delta (based on value in signals.txt) waves  */
+    for (int s = 0; s < noisesNb; s++)
     {
         cout << NLAYERS << endl;
         cout << outerGain[s] << endl;
@@ -153,7 +147,7 @@ int main(int argc, const char *argv[])
         int count = 0;
         cout << "subject: " << SUBJECT << endl;
         string sbjct = std::to_string(SUBJECT);
-
+        /** Open files to input and extract data */
         paramsFile.open("./cppData/subject" + sbjct + "/cppParams_subject_" + signals + sbjct + ".tsv", fstream::out);
 
         nnFile.open("./cppData/subject" + sbjct + "/fnn_subject_" + signals + sbjct + ".tsv", fstream::out);
@@ -166,25 +160,17 @@ int main(int argc, const char *argv[])
         laplaceFile.open("./cppData/subject" + sbjct + "/laplace_subject_" + signals + sbjct + ".tsv", fstream::out);
         eegInfileNoisy.open("./SubjectData/" + signals + "/Noisy/EEG_Subject" + sbjct + ".tsv");
         errorFile.open("./cppData/subject" + sbjct + "/error_subject_" + signals + sbjct + ".tsv", fstream::out);
-
-        for (int i = 0; i < numTrials; i++)
-        {
-            outerFilter[i] = new Fir1("./pyFiles/forOuter.dat");
-            outerFilter[i]->reset();
-        }
-        for (int i = 0; i < numTrials; i++)
-        {
-            innerFilter[i] = new Fir1("./pyFiles/forInner.dat");
-            innerFilter[i]->reset();
-        }
+        /** Setup LMS filter with coefficients from FIR and Learning rate 1e-6 */
         lmsFilterNoisy = new Fir1(LMS_COEFF);
         lmsFilterNoisy->setLearningRate(LMS_LEARNING_RATE);
         double corrLMSNoisy = 0;
         double lmsOutputNoisy = 0;
+        /** Initialize neural network for every noise type visited */
         NNN->initNetwork(Neuron::W_RANDOM, Neuron::B_RANDOM, Neuron::Act_Sigmoid);
         double minError;
         int lineNb = 0;
         std::string line;
+        /** Extract number of lines in file for progress bar completion */
         while (!eegInfileNoisy.eof())
         {
             std::getline(eegInfileNoisy, line);
@@ -195,53 +181,57 @@ int main(int argc, const char *argv[])
         eegInfileNoisy.close();
 
         eegInfileNoisy.open("./SubjectData/" + signals + "/Noisy/EEG_Subject" + sbjct + ".tsv");
-
+        /** Loop over alpha/delta samples */
         while (!eegInfileNoisy.eof())
         {
             ++progressBar;
             progressBar.display();
             count += 1;
+            /** Get inner and outer data */
             eegInfileNoisy >>
                 sampleNumNoisy >> innerDataNoisy >> outerDataNoisy;
+            /** Add gain to inner and outer and feed to delay line structure */
             outerDataNoisy *= outerGain[s];
             innerDataNoisy *= innerGain[s];
-            double innerFilteredNoisy = innerFilter[1]->filter(innerDataNoisy);
             innerNoisyDelayLine.push_back(innerDataNoisy);
             double innerNoisy = innerNoisyDelayLine[0];
-
-            double outerNoisy = outerFilter[1]->filter(outerDataNoisy);
             for (int i = outerDelayLineLength - 1; i > 0; i--)
             {
                 outerNoisyDelayLine[i] = outerNoisyDelayLine[i - 1];
             }
             outerNoisyDelayLine[0] = outerDataNoisy;
             double *outerDelayedNoisy = &outerNoisyDelayLine[0];
-
+            /** Setup inputs for Neural Network with modified noise artefacts */
             NNN->setInputs(outerDelayedNoisy); // Here Input
             NNN->propInputs();
+            /** Main operation for subtracting the noise from the noisy EEG */
             double removerNoisy = NNN->getOutput(0) * removerGain[s];
             double fNNNoisy = (innerNoisy - removerNoisy) * fnnGain[s];
+            /** Save parameters for SNR calculation, -1 dictates no pure signal sent to the NN */
             removerFile
                 << "-1"
                 << " " << removerNoisy << endl;
             nnFile << "-1"
                    << " " << fNNNoisy << endl;
+            /** Perform backpropagation based on output fNNNoisy */
             NNN->setErrorCoeff(0, 1, 0, 0, 0, 0); //global, back, mid, forward, local, echo error
             NNN->setBackwardError(fNNNoisy);
             NNN->propErrorBackward();
-
+            /** Setup learning rate for changing based on the error */
             NNN->setLearningRate(w[s], b[s]);
 
             NNN->updateWeights();
 
             NNN->snapWeights("cppData", "Noisy", SUBJECT);
+            /** Perform Laplace Operator */
             double laplace = innerDataNoisy - outerDataNoisy;
-
+            /** Perform LMS filtering */
             corrLMSNoisy += lmsFilterNoisy->filter(outerDataNoisy);
 
             lmsOutputNoisy = innerDataNoisy - corrLMSNoisy;
 
             lmsFilterNoisy->lms_update(lmsOutputNoisy);
+            /** Save files for SNR calculations afetr execution, -1 determines no for pure signal */
             laplaceFile << "-1"
                         << " " << laplace << endl;
             lmsFile << "-1"
@@ -249,12 +239,13 @@ int main(int argc, const char *argv[])
             lmsRemoverFile << "-1"
                            << " " << corrLMSNoisy << endl;
             innerFile << "-1"
-                      << " " << innerNoisy << endl;
+                      << " " << innerDataNoisy << endl;
             outerFile << "-1"
-                      << " " << outerNoisy << endl;
+                      << " " << outerDataNoisy << endl;
             errorFile << fNNNoisy << " " << lmsOutputNoisy << " " << laplace << endl;
         }
         progressBar.done();
+        /** Save all parameters relevant to the DNF for best parameters analysis */
         paramsFile << NLAYERS << endl;
         paramsFile << outerDelayLineLength << endl;
         paramsFile << innerDelayLineLength << endl;
