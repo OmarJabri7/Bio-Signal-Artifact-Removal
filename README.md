@@ -35,7 +35,7 @@ The DNF was able to denoise complex combinations of noises within the sinusoid, 
 
 # Synthetic EEG Generation
 
-![image-20210820171355524](file:///Users/omar/Library/Application Support/typora-user-images/image-20210820171355524.png?lastModify=1629479172)
+![image-20210820171355524](Plots/alpha_t.png)
 
 ![image-20210820171401533](file:///Users/omar/Library/Application Support/typora-user-images/image-20210820171401533.png?lastModify=1629479172)
 
