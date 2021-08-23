@@ -35,10 +35,6 @@ The DNF was able to denoise complex combinations of noises within the sinusoid, 
 
 # Synthetic EEG Generation
 
-![](/Users/omar/Desktop/UofG/Master's Project/Thesis/EEG-Artifact-Removal---UofG-Thesis/Plots/alpha_t.png)
-
-![image-20210820171401533](Plots/alpha_fr.png)
-
 ![image-20210820171409149](Plots/delta_t.png)
 
 ![image-20210820171414790](Plots/delta_fr.png)
