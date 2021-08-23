@@ -37,21 +37,21 @@ The DNF was able to denoise complex combinations of noises within the sinusoid, 
 
 ![image-20210820171355524](Plots/alpha_t.png)
 
-![image-20210820171401533](file:///Users/omar/Library/Application Support/typora-user-images/image-20210820171401533.png?lastModify=1629479172)
+![image-20210820171401533](Plots/alpha_fr.png)
 
-![image-20210820171409149](file:///Users/omar/Library/Application Support/typora-user-images/image-20210820171409149.png?lastModify=1629479172)
+![image-20210820171409149](Plots/delta_t.png)
 
-![image-20210820171414790](file:///Users/omar/Library/Application Support/typora-user-images/image-20210820171414790.png?lastModify=1629479172)
+![image-20210820171414790](Plots/delta_fr.png)
 
 # Noise Addition
 
-![image-20210820174059292](file:///Users/omar/Library/Application Support/typora-user-images/image-20210820174059292.png?lastModify=1629479172)
+![image-20210820174059292](Plots/eeg_gen.png)
 
 For each subject, a variety of noise recordings are added to different delta and alpha waves.
 
 # Deep Neuronal Filter
 
-![image-20210820174909398](file:///Users/omar/Library/Application Support/typora-user-images/image-20210820174909398.png?lastModify=1629479172)
+![image-20210820174909398](Plots/dnf_sys_final.png)
 
 # Setup System
 
