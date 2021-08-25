@@ -63,3 +63,9 @@ For each subject, a variety of noise recordings are added to different delta and
 
 ## C++ Libraries:
 
+## Run System:
+* Check all options are correct in options.json
+* Run System:
+`cd deepNeuronalFilter`
+`./run_all_stat.sh`
+
