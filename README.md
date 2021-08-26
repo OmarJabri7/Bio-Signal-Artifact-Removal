@@ -61,7 +61,8 @@ For each subject, a variety of noise recordings are added to different delta and
 `pip install scipy`
 
 ## C++ Libraries:
-
+* IIR Filter: https://github.com/berndporr/iir1 <br>
+* FIR Filter: https://github.com/berndporr/fir1 <br>
 ## Run System:<br>
 * Check all options are correct in deepNeuronalFilter/options.json:<br>
 {
