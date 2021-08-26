@@ -77,3 +77,27 @@ For each subject, a variety of noise recordings are added to different delta and
 `./run_all_stat.sh`
 
 ## SNR Results of DNF, Laplace and LMS Filters:
+### <b>Subject 0<b>:<br>
+![image](Results-Generation/best/no_combos/subj0/Bar_Plot_SNRs_Alpha.png)
+![image](Results-Generation/best/no_combos/subj0/Bar_Plot_SNRs_Delta.png)
+ ### <b>Subject 1<b>:<br>
+ ![image](Results-Generation/best/no_combos/subj1/Bar_Plot_SNRs_Alpha.png)
+ ![image](Results-Generation/best/no_combos/subj1/Bar_Plot_SNRs_Delta.png)
+ ### Subject 2: <br>
+ ![image](Results-Generation/best/no_combos/subj2/Bar_Plot_SNRs_Alpha.png)
+ ![image](Results-Generation/best/no_combos/subj2/Bar_Plot_SNRs_Delta.png)
+ ### Subject 3: 
+ ![image](Results-Generation/best/no_combos/subj3/Bar_Plot_SNRs_Alpha.png)
+ ![image](Results-Generation/best/no_combos/subj3/Bar_Plot_SNRs_Delta.png)
+ ### Subject 4:
+ ![image](Results-Generation/best/no_combos/subj4/Bar_Plot_SNRs_Alpha.png)
+ ![image](Results-Generation/best/no_combos/subj4/Bar_Plot_SNRs_Delta.png)
+ ### Subject 5:
+ ![image](Results-Generation/best/no_combos/subj5/Bar_Plot_SNRs_Alpha.png)
+ ![image](Results-Generation/best/no_combos/subj5/Bar_Plot_SNRs_Delta.png)
+ ### Subject 6:
+ ![image](Results-Generation/best/no_combos/subj6/Bar_Plot_SNRs_Alpha.png)
+ ![image](Results-Generation/best/no_combos/subj6/Bar_Plot_SNRs_Delta.png)
+ ### Subject 7:
+ ![image](Results-Generation/best/no_combos/subj7/Bar_Plot_SNRs_Alpha.png)
+ ![image](Results-Generation/best/no_combos/subj7/Bar_Plot_SNRs_Delta.png)
