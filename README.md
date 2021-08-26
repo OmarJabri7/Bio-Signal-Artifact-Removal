@@ -74,7 +74,12 @@ For each subject, a variety of noise recordings are added to different delta and
 => Change noises to directory of choice, change subject number to subject of choice (i.e., 1 to 7).
 * Run System:<br>
 `cd deepNeuronalFilter`<br>
-`./run_all_stat.sh`
+`./run_all_stat.sh`<br>
+<b> This system will <b>:
+    1. generate eeg based on the options.json<br>
+    2. run the DNF<br>
+    3. calculate SNRs after filtering<br>
+    4. reject/accept the null hypothesis in the end <br>
 
 ## SNR Results of DNF, Laplace and LMS Filters:
 ### <b>Subject 0<b>:<br>
