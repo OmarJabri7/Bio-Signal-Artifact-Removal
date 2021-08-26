@@ -63,9 +63,16 @@ For each subject, a variety of noise recordings are added to different delta and
 
 ## C++ Libraries:
 
-## Run System:
-* Check all options are correct in options.json
+## Run System:<br>
+* Check all options are correct in options.json:<br>
+{
+    "noises_alpha": ["eyescrunching", "jaw",
+               "raisingeyebrows", "movehat", "movehead"],
+    "noises_delta": ["blink", "templerun", "sudoku", "flow", "wordsearch"],
+    "subject": 0
+} <br>
+=> Change noises to directory of choice, change subject number to subject of choice (i.e., 1 to 7).
 * Run System:
-`cd deepNeuronalFilter`
+`cd deepNeuronalFilter`<br>
 `./run_all_stat.sh`
 
