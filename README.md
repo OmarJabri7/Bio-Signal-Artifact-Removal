@@ -76,3 +76,4 @@ For each subject, a variety of noise recordings are added to different delta and
 `cd deepNeuronalFilter`<br>
 `./run_all_stat.sh`
 
+## SNR Results of DNF, Laplace and LMS Filters:
