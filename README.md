@@ -35,14 +35,6 @@ The DNF was able to denoise complex combinations of noises within the sinusoid, 
 
 # Synthetic EEG Generation
 
-![image-20210820171355524](Plots/alpha_t.png)
-
-![image-20210820171401533](Plots/alpha_fr.png)
-
-![image-20210820171409149](Plots/delta_t.png)
-
-![image-20210820171414790](Plots/delta_fr.png)
-
 # Noise Addition
 
 ![image-20210820174059292](Plots/eeg_gen.png)
@@ -66,4 +58,17 @@ For each subject, a variety of noise recordings are added to different delta and
 `pip install scipy`
 
 ## C++ Libraries:
+
+## Run System:<br>
+* Check all options are correct in deepNeuronalFilter/options.json:<br>
+{
+    "noises_alpha": ["eyescrunching", "jaw",
+               "raisingeyebrows", "movehat", "movehead"],
+    "noises_delta": ["blink", "templerun", "sudoku", "flow", "wordsearch"],
+    "subject": 0
+} <br>
+=> Change noises to directory of choice, change subject number to subject of choice (i.e., 1 to 7).
+* Run System:<br>
+`cd deepNeuronalFilter`<br>
+`./run_all_stat.sh`
 
